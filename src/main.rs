@@ -6,7 +6,7 @@ use embassy_executor::_export::StaticCell;
 use embassy_net::tcp::TcpSocket;
 use embassy_net::{Config, Ipv4Address, Stack, StackResources};
 
-use embassy_executor::raw::Executor;
+use embassy_executor::Executor;
 use embassy_time::{Duration, Timer};
 use embedded_svc::wifi::{ClientConfiguration, Configuration, Wifi};
 use esp_backtrace as _;
@@ -47,6 +47,7 @@ fn main() -> ! {
         &mut system.peripheral_clock_control,
     )
     .timer0;
+
     let init = initialize(
         EspWifiInitFor::Wifi,
         timer,

@@ -200,6 +200,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "embassy-futures"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "47e5367165d347c039360f784812f493b001583ab6a3dd8622f4ce9c30374ec3"
+
+[[package]]
 name = "embassy-macros"
 version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -268,6 +274,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "embedded-can"
+version = "0.4.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e9d2e857f87ac832df68fa498d18ddc679175cf3d2e4aa893988e5601baf9438"
+dependencies = [
+ "nb 1.1.0",
+]
+
+[[package]]
 name = "embedded-dma"
 version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -302,6 +317,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "embedded-hal-nb"
+version = "1.0.0-rc.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "257e3bb0163c69195acb0ebe0083b017b963235861d5ea9741626abdc55f39c9"
+dependencies = [
+ "embedded-hal 1.0.0-rc.1",
+ "nb 1.1.0",
+]
+
+[[package]]
 name = "embedded-io"
 version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -312,6 +337,15 @@ name = "embedded-io"
 version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "658bbadc628dc286b9ae02f0cb0f5411c056eb7487b72f0083203f115de94060"
+
+[[package]]
+name = "embedded-io-async"
+version = "0.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1394754ad749a560b25a0c70dcd2b66a450824a1311fc475bb2ccbfabe7f8414"
+dependencies = [
+ "embedded-io 0.5.0",
+]
 
 [[package]]
 name = "embedded-nal"
@@ -419,10 +453,17 @@ dependencies = [
  "bitflags 2.4.0",
  "cfg-if",
  "critical-section",
+ "embassy-futures",
+ "embassy-sync",
  "embassy-time",
+ "embedded-can",
  "embedded-dma",
  "embedded-hal 0.2.7",
+ "embedded-hal 1.0.0-rc.1",
+ "embedded-hal-async",
+ "embedded-hal-nb",
  "embedded-io 0.5.0",
+ "embedded-io-async",
  "esp-hal-procmacros",
  "esp-riscv-rt",
  "esp-synopsys-usb-otg",
@@ -499,6 +540,9 @@ source = "git+https://github.com/esp-rs/esp-wifi/?rev=fbb8417#fbb8417fc450ec0701
 dependencies = [
  "atomic-polyfill 1.0.3",
  "critical-section",
+ "embassy-futures",
+ "embassy-net-driver",
+ "embassy-sync",
  "embedded-io 0.4.0",
  "embedded-svc",
  "enumset",
