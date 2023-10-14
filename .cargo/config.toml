@@ -1,21 +1,53 @@
-[target.xtensa-esp32-none-elf]
-runner = "espflash flash --monitor"
-
-
+##########################################################
+#                 Environment Variables                  #
+##########################################################
 [env]
-ESP_LOGLEVEL="INFO"
+DEFMT_LOG = "debug"
+ESP_LOGLEVEL="DEBUG"
 
 
-[build]
-target = "xtensa-esp32-none-elf"
-rustflags = [
-  "-C", "link-arg=-Tlinkall.x",
-  "-C", "link-arg=-Trom_functions.x",
-
-  "-C", "link-arg=-nostartfiles",
-]
-
-
+##########################################################
+#                   "General" Settings                   #
+##########################################################
 [unstable]
 build-std = ["alloc", "core"]
 
+
+##########################################################
+#                     RP2040 Options                     #
+##########################################################
+[target.thumbv6m-none-eabi]
+
+runner = "elf2uf2-rs -d"
+
+# Pass some extra options to rustc, some of which get passed on to the linker.
+#
+# * linker argument --nmagic turns off page alignment of sections (which saves
+#   flash space)
+# * linker argument -Tlink.x tells the linker to use link.x as the linker
+#   script. This is usually provided by the cortex-m-rt crate, and by default
+#   the version in that crate will include a file called `memory.x` which
+#   describes the particular memory layout for your specific chip.
+# * inline-threshold=5 makes the compiler more aggressive and inlining functions
+# * no-vectorize-loops turns off the loop vectorizer (seeing as the M0+ doesn't
+#   have SIMD)
+
+rustflags = [
+  "-C", "link-arg=--nmagic",
+  "-C", "link-arg=-Tlink.x",
+  "-C", "inline-threshold=5",
+  "-C", "no-vectorize-loops",
+]
+
+
+##########################################################
+#                     ESP32 Options                      #
+##########################################################
+[target.xtensa-esp32-none-elf]
+
+runner = "espflash flash --monitor"
+rustflags = [
+  "-C", "link-arg=-Tlinkall.x",
+  "-C", "link-arg=-nostartfiles",
+  "-C", "link-arg=-Trom_functions.x",
+]
