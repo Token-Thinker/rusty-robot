@@ -1,49 +1,40 @@
 #![no_std]
 #![no_main]
+#![feature(type_alias_impl_trait)]
 
-extern crate alloc;
-use core::mem::MaybeUninit;
-use esp_backtrace as _;
-use esp_println::println;
-use hal::{clock::ClockControl, peripherals::Peripherals, prelude::*, Delay};
+#[allow(unused_imports, clippy::single_component_path_imports)]
+use esp_backtrace;
 
+use hal::{
+    clock::ClockControl, embassy, embassy::executor::Executor, gpio::*, peripherals::Peripherals,
+    prelude::*, timer::TimerGroup, Rng,
+};
+
+use embassy_executor::_export::StaticCell;
+use embassy_time::{Duration, Timer};
 use esp_wifi::{initialize, EspWifiInitFor};
 
-use hal::{timer::TimerGroup, Rng};
-#[global_allocator]
-static ALLOCATOR: esp_alloc::EspHeap = esp_alloc::EspHeap::empty();
-
-fn init_heap() {
-    const HEAP_SIZE: usize = 32 * 1024;
-    static mut HEAP: MaybeUninit<[u8; HEAP_SIZE]> = MaybeUninit::uninit();
-
-    unsafe {
-        ALLOCATOR.init(HEAP.as_mut_ptr() as *mut u8, HEAP_SIZE);
-    }
-}
+static EXECUTOR: StaticCell<Executor> = StaticCell::new();
 
 #[entry]
 fn main() -> ! {
-    init_heap();
     let peripherals = Peripherals::take();
     let mut system = peripherals.DPORT.split();
-    let clocks = ClockControl::max(system.clock_control).freeze();
-    let mut delay = Delay::new(&clocks);
 
-    // setup logger
-    // To change the log_level change the env section in .cargo/config.toml
-    // or remove it and set ESP_LOGLEVEL manually before running cargo run
-    // this requires a clean rebuild because of https://github.com/rust-lang/cargo/issues/10358
+    let clocks = ClockControl::max(system.clock_control).freeze();
+
     esp_println::logger::init_logger_from_env();
+
     log::info!("Logger is setup");
-    println!("Hello world!");
+
     let timer = TimerGroup::new(
         peripherals.TIMG1,
         &clocks,
         &mut system.peripheral_clock_control,
     )
     .timer0;
-    let _init = initialize(
+
+    initialize(
         EspWifiInitFor::Wifi,
         timer,
         Rng::new(peripherals.RNG),
@@ -51,8 +42,33 @@ fn main() -> ! {
         &clocks,
     )
     .unwrap();
+
+    let timer_group0 = TimerGroup::new(
+        peripherals.TIMG0,
+        &clocks,
+        &mut system.peripheral_clock_control,
+    );
+
+    embassy::init(&clocks, timer_group0.timer0);
+
+    let executor = EXECUTOR.init(Executor::new());
+    let io = IO::new(peripherals.GPIO, peripherals.IO_MUX);
+    let led_pin = io.pins.gpio4.into_push_pull_output();
+
+    executor.run(|spawner| {
+        spawner.spawn(blink(led_pin)).ok();
+    })
+}
+
+#[embassy_macros::task]
+async fn blink(mut len_pin: GpioPin<Output<PushPull>, 4>) {
     loop {
-        println!("Loop...");
-        delay.delay_ms(500u32);
+        log::info!("Toggling LED on ...");
+        len_pin.set_high().unwrap();
+        Timer::after(Duration::from_millis(750)).await;
+
+        log::info!("Toggling LED off ...");
+        len_pin.set_low().unwrap();
+        Timer::after(Duration::from_millis(750)).await;
     }
 }
