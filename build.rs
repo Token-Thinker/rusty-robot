@@ -1,3 +1,5 @@
+#![allow(unused_imports)]
+
 //! This build script copies the `memory.x` file from the crate root into
 //! a directory where the linker can always find it at build time.
 //! For many projects this is optional, as the linker always searches the
@@ -14,7 +16,8 @@ use std::io::Write;
 use std::path::PathBuf;
 
 fn main() {
-    if cfg!(target = "thumbv6m-none-eabi") {
+    #[cfg(all(target_os = "none", target_arch = "arm", target_vendor = "unknown"))]
+    {
         // Put `memory.x` in our output directory and ensure it's
         // on the linker search path.
         let out = &PathBuf::from(env::var_os("OUT_DIR").unwrap());

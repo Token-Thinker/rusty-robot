@@ -9,25 +9,25 @@
 //! setup to present a uniform interface to the project's
 //! "common" dependencies.
 
-#[cfg(not(target_os = "none"))]
-pub(crate) use default_prelude::*;
-#[cfg(target = "xtensa-esp32-none-elf")]
-pub(crate) use esp32_prelude::*;
-#[cfg(target = "thumbv6m-none-eabi")]
-pub(crate) use rp2040_prelude::*;
+#[cfg(all(not(target_os = "none"), not(target_vendor = "unknown")))]
+pub use default_prelude::*;
+#[cfg(all(target_os = "none", target_arch = "xtensa", target_vendor = "unknown"))]
+pub use esp32_prelude::*;
+#[cfg(all(target_os = "none", target_arch = "arm", target_vendor = "unknown"))]
+pub use rp2040_prelude::*;
 
-#[cfg(not(target_os = "none"))]
-pub(crate) mod default_prelude {
-    pub use core::prelude::*;
+#[cfg(all(not(target_os = "none"), not(target_vendor = "unknown")))]
+pub mod default_prelude {
+    panic!();
 }
 
-#[cfg(target = "thumbv6m-none-eabi")]
-pub(crate) mod rp2040_prelude {
-    pub use core::prelude::*;
+#[cfg(all(target_os = "none", target_arch = "arm", target_vendor = "unknown"))]
+pub mod rp2040_prelude {
+    panic!();
 }
 
-#[cfg(target = "xtensa-esp32-none-elf")]
-pub(crate) mod esp32_prelude {
+#[cfg(all(target_os = "none", target_arch = "xtensa", target_vendor = "unknown"))]
+pub mod esp32_prelude {
     #[allow(clippy::single_component_path_imports)]
     pub use esp_backtrace;
 
