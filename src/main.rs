@@ -24,16 +24,34 @@ fn main() -> ! {
         &mut system.peripheral_clock_control,
     );
 
+    let clock_cfg = PeripheralClockConfig::with_frequency(&clocks, 40u32.MHz()).unwrap();
+    let mut mcpwm = MCPWM::new(peripherals.MCPWM0, clock_cfg, &mut system.peripheral_clock_control);
+    
     embassy::init(&clocks, timer_group0.timer0);
 
     let executor = EXECUTOR.init(Executor::new());
 
     logger::init_logger_from_env();
-
     log::info!("Logger is setup");
 
     let io = gpio::IO::new(peripherals.GPIO, peripherals.IO_MUX);
+
     let led_pin = io.pins.gpio4.into_push_pull_output();
+    let servo_pin = io.pins.gpio12;
+
+    // connect operator0 to timer0
+    mcpwm.operator1.set_timer(&mcpwm.timer1);
+
+    // connect operator0 to gpio12
+    let mut pwm_pin = mcpwm.operator1.with_pin_a(servo_pin, PwmPinConfig::UP_ACTIVE_HIGH);
+
+    // start timer with timestamp values in the range of 0..=99 and a frequency of 20 kHz
+    let timer_clock_cfg = clock_cfg
+        .timer_clock_with_frequency(99, PwmWorkingMode::Increase, 20u32.kHz())
+        .unwrap();
+    mcpwm.timer1.start(timer_clock_cfg);
+
+    pwm_pin.set_timestamp(50);
 
     executor.run(|spawner| {
         spawner.spawn(blink(led_pin)).ok();

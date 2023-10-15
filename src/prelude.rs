@@ -37,8 +37,11 @@ pub mod esp32_prelude {
         embassy,
         embassy::executor::Executor,
         gpio,
+        gpio::OutputPin,
         peripherals::Peripherals,
         prelude::*,
         timer::TimerGroup, // Rng,
+        mcpwm::{operator::PwmPinConfig, timer::PwmWorkingMode, PeripheralClockConfig, MCPWM},
+
     };
 }
