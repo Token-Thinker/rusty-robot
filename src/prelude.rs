@@ -37,11 +37,12 @@ pub mod esp32_prelude {
         embassy,
         embassy::executor::Executor,
         gpio,
-        gpio::OutputPin,
-        mcpwm::{
-            operator::{PwmPin, PwmPinConfig},
-            timer::PwmWorkingMode,
-            PeripheralClockConfig, PwmPeripheral, MCPWM,
+        gpio::{PushPull, Output, GpioPin},
+        ledc::{
+            channel::{self, ChannelIFace},
+            timer::{self, TimerIFace},
+            HighSpeed,
+            LEDC,
         },
         peripherals::Peripherals,
         prelude::*,
