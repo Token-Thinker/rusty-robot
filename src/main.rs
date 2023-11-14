@@ -30,16 +30,15 @@ fn main() -> ! {
     let peripherals = Peripherals::take();
     let mut system = peripherals.DPORT.split();
 
-    let clocks_control = ClockControl::max(system.clock_control).freeze();
-    let clocks = CLOCKS.init(clocks_control);
+    let clocks = CLOCKS.init(ClockControl::max(system.clock_control).freeze());
 
     let ledc = LEDC.init_with(|| {
         LEDC::new(peripherals.LEDC, clocks, &mut system.peripheral_clock_control)
     });
 
     let io = gpio::IO::new(peripherals.GPIO, peripherals.IO_MUX);
-    let led_pin = io.pins.gpio4.into_push_pull_output();
-    let led = io.pins.gpio12.into_push_pull_output();
+    let led = io.pins.gpio4.into_push_pull_output();
+    //let led = io.pins.gpio12.into_push_pull_output();
 
     let hstimer0 = HSTIMER0.init_with( || {
         ledc.get_timer::<HighSpeed>(timer::Number::Timer0)
@@ -80,12 +79,12 @@ fn main() -> ! {
     log::info!("Logger is setup");
 
     executor.run(|spawner| {
-        spawner.spawn(blink(led_pin)).ok();
+        //spawner.spawn(blink(led_pin)).ok();
         spawner.spawn(breathe(channel0)).ok();
     })
 }
 
-#[embassy_macros::task]
+/*#[embassy_macros::task]
 async fn blink(mut led_pin: GpioPin<Output<PushPull>, 4>) {
     loop {
         log::info!("Toggling LED on ...");
@@ -97,9 +96,10 @@ async fn blink(mut led_pin: GpioPin<Output<PushPull>, 4>) {
         Timer::after(Duration::from_millis(1500)).await;
     }
 }
+*/
 
 #[embassy_macros::task]
-async fn breathe(channel0: hal::ledc::channel::Channel<'static, HighSpeed, GpioPin<Output<PushPull>, 12>> ) {        
+async fn breathe(channel0: hal::ledc::channel::Channel<'static, HighSpeed, GpioPin<Output<PushPull>, 4>> ) {        
     loop {
         channel0.start_duty_fade(0, 100, 1000).unwrap();
         while channel0.is_duty_fade_running() {}
