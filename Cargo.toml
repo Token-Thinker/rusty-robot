@@ -17,6 +17,7 @@ embassy-time = "*"
 embassy-macros = "*"
 embassy-futures = "*"
 embassy-executor = "*"
+embassy-sync = "*"
 smoltcp = { version = "^0.10", default-features = false, features = [
     "socket-udp",
     "proto-igmp",
@@ -28,6 +29,7 @@ smoltcp = { version = "^0.10", default-features = false, features = [
     "socket-dhcpv4",
     "medium-ethernet",
 ] }
+static_cell = { version = "2.0.0", features = ["nightly"] }
 
 
 ##########################################################
@@ -43,6 +45,8 @@ embassy-rp = "*"
 [target.xtensa-esp32-none-elf.dependencies]
 
 esp-println = { version = "^0.6", features = ["log", "esp32"] }
+esp-hal-common = { version = "0.13.0", features = ["esp32", "xtal-40mhz", "embassy-executor-thread", "embassy-time-timg0"] }
+
 hal = { package = "esp32-hal", version = "^0.15", features = [
     "log",
     "async",

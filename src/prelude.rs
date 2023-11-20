@@ -32,6 +32,8 @@ pub mod esp32_prelude {
     pub use esp_backtrace;
 
     pub use esp_println::logger;
+    pub use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, signal::Signal};
+
     pub use hal::{
         clock::ClockControl,
         embassy,
@@ -47,5 +49,6 @@ pub mod esp32_prelude {
         peripherals::Peripherals,
         prelude::*,
         timer::TimerGroup, // Rng,
+        cpu_control::{CpuControl, Stack}
     };
 }
