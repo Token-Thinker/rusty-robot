@@ -2,11 +2,9 @@
 #![no_main]
 #![feature(type_alias_impl_trait)]
 
-//use embassy_executor::_export::StaticCell;
-use embassy_time::{Duration, Ticker};
 use esp_println::println;
-use esp_hal_common::get_core;
-// use esp_wifi::{initialize, EspWifiInitFor};
+use hal::get_core;
+
 pub mod prelude;
 
 use embassy_executor::Spawner;
@@ -60,10 +58,10 @@ async fn breathe(channel0: hal::ledc::channel::Channel<'static, HighSpeed, GpioP
 } */
 
 
-#[main]
+#[embassy_executor::main]
 async fn main(_spawner: Spawner) -> ! {
     let peripherals = Peripherals::take();
-    let system = peripherals.DPORT.split();
+    let mut system = peripherals.DPORT.split();
     let clocks = ClockControl::boot_defaults(system.clock_control).freeze();
 
     let timer_group0 = TimerGroup::new(
@@ -97,6 +95,7 @@ async fn main(_spawner: Spawner) -> ! {
         get_core() as usize
     );
     let mut ticker = Ticker::every(Duration::from_secs(1));
+    
     loop {
         esp_println::println!("Sending LED on");
         led_ctrl_signal.signal(true);

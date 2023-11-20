@@ -33,13 +33,13 @@ pub mod esp32_prelude {
 
     pub use esp_println::logger;
     pub use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, signal::Signal};
+    pub use embassy_executor::Spawner;
+    pub use embassy_time::{Duration, Ticker};
 
     pub use hal::{
         clock::ClockControl,
-        embassy,
-        embassy::executor::Executor,
-        gpio,
-        gpio::{PushPull, Output, GpioPin},
+        embassy::{self, executor::Executor},
+        gpio::{self, PushPull, Output, GpioPin},
         ledc::{
             channel::{self, ChannelIFace},
             timer::{self, TimerIFace},
