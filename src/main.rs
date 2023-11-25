@@ -53,7 +53,8 @@ async fn control_led(
 
 #[embassy_executor::task]
 async fn control_servo(
-    servo: GpioPin<Output<PushPull>, 12>,
+    servo_pan: GpioPin<Output<PushPull>, 16>,
+    servo_tilt: GpioPin<Output<PushPull>, 13>,
     ledc: &'static LEDC<'_>,
 ){
     println!("Initializing control_servo task");
@@ -84,7 +85,8 @@ async fn control_servo(
         duty_14bit as u32
     }
 
-    let mut channel1 = ledc.get_channel(channel::Number::Channel1, servo);
+    let mut channel1 = ledc.get_channel(channel::Number::Channel1, servo_pan);
+    let mut channel2 = ledc.get_channel(channel::Number::Channel1, servo_tilt);
     println!("Channel configured");
 
     channel1
@@ -94,6 +96,14 @@ async fn control_servo(
             pin_config: channel::config::PinConfig::PushPull,
         })
         .unwrap();
+
+    channel2
+    .configure(channel::config::Config {
+        timer: &hstimer1,
+        duty_pct: 10,
+        pin_config: channel::config::PinConfig::PushPull,
+    })
+    .unwrap();
     println!("Channel initialization complete, starting sweep");
 
     // Sweeping loop
@@ -102,6 +112,7 @@ async fn control_servo(
         for angle in 0..=180u8 {
             let duty = angle_to_duty(angle);
             channel1.set_duty_hw(duty);
+            channel2.set_duty_hw(duty);
             println!("Sweeping up - Angle: {}, Duty: {}", angle, duty);
             Timer::after(Duration::from_millis(10)).await;
         }
@@ -110,6 +121,7 @@ async fn control_servo(
         for angle in (0..=180u8).rev() {
             let duty = angle_to_duty(angle);
             channel1.set_duty_hw(duty);
+            channel2.set_duty_hw(duty);
             println!("Sweeping down - Angle: {}, Duty: {}", angle, duty);
             Timer::after(Duration::from_millis(10)).await;
         }
@@ -137,7 +149,8 @@ async fn main(_spawner: Spawner) -> ! {
     let led_ctrl_signal = &*make_static!(Signal::new());
 
     let led = io.pins.gpio4.into_push_pull_output();
-    let servo = io.pins.gpio12.into_push_pull_output();
+    let servo_pan = io.pins.gpio16.into_push_pull_output();
+    let servo_tilt = io.pins.gpio13.into_push_pull_output();
     let ledc = make_static!(LEDC::new(peripherals.LEDC, clocks));
 
     let cpu1_fnctn = move || {
@@ -158,7 +171,7 @@ async fn main(_spawner: Spawner) -> ! {
     );
     let mut ticker = Ticker::every(Duration::from_secs(1));
 
-    _spawner.spawn(control_servo(servo, ledc)).ok();
+    _spawner.spawn(control_servo(servo_pan,servo_tilt, ledc)).ok();
 
     loop {
         esp_println::println!("Sending LED on");
