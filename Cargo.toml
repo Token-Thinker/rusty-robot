@@ -46,7 +46,7 @@ embassy-rp = "*"
 
 esp-println = { version = "^0.6", features = ["log", "esp32"] }
 
-hal = { package = "esp32-hal", version = "^0.15", features = [
+hal = { package = "esp32-hal", version = "^0.16", features = [
     "log",
     "async",
     "embassy",

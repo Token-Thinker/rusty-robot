@@ -38,7 +38,7 @@ pub mod esp32_prelude {
 
     pub use hal::{
         clock::ClockControl,
-        embassy::{self, executor::Executor},
+        embassy::{self, executor::{Executor, FromCpu1, FromCpu2, InterruptExecutor}},
         gpio::{self, PushPull, Output, GpioPin},
         ledc::{
             channel::{self, ChannelIFace},
@@ -49,6 +49,7 @@ pub mod esp32_prelude {
         peripherals::Peripherals,
         prelude::*,
         timer::TimerGroup, // Rng,
-        cpu_control::{CpuControl, Stack}
+        cpu_control::{CpuControl, Stack},
+        interrupt::Priority,
     };
 }

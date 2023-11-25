@@ -3,35 +3,25 @@
 #![feature(type_alias_impl_trait)]
 
 use esp_println::println;
-use hal::get_core;
+use hal::{get_core, clock::Clocks};
 
 pub mod prelude;
 
 use embassy_executor::Spawner;
-use static_cell::make_static;
+use hal::embassy::executor::Executor;
+use static_cell::{make_static, StaticCell};
 
 static mut APP_CORE_STACK: Stack<8192> = Stack::new();
+
+static CLOCKS: StaticCell<Clocks> = StaticCell::new();
 
 
 #[allow(unused_imports)]
 use prelude::*;
 
-/*#[embassy_macros::task]
-async fn blink(mut led_pin: GpioPin<Output<PushPull>, 4>) {
-    loop {
-        log::info!("Toggling LED on ...");
-        led_pin.set_high().unwrap();
-        Timer::after(Duration::from_millis(1500)).await;
-
-        log::info!("Toggling LED off ...");
-        led_pin.set_low().unwrap();
-        Timer::after(Duration::from_millis(1500)).await;
-    }
-}
-*/
 #[embassy_executor::task]
 async fn control_led(
-    mut led: GpioPin<Output<PushPull>, 0>,
+    mut led: GpioPin<Output<PushPull>, 12>,
     control: &'static Signal<CriticalSectionRawMutex, bool>,
 ) {
     println!("Starting control_led() on core {}", get_core() as usize);
@@ -46,8 +36,34 @@ async fn control_led(
     }
 }
 
-/* #[embassy_macros::task]
-async fn breathe(channel0: hal::ledc::channel::Channel<'static, HighSpeed, GpioPin<Output<PushPull>, 4>> ) {        
+#[embassy_executor::task]
+async fn control_servo(
+    servo: GpioPin<Output<PushPull>, 4>,
+    ledc: &'static LEDC<'_>,
+){
+    let mut hstimer0 = ledc.get_timer::<HighSpeed>(timer::Number::Timer0);
+
+    hstimer0
+    .configure(timer::config::Config {
+        duty: timer::config::Duty::Duty5Bit,
+        clock_source: timer::HSClockSource::APBClk,
+        frequency: 24u32.kHz(),
+    })
+    .unwrap();
+
+    let mut channel0 = ledc.get_channel(channel::Number::Channel0, servo);
+    channel0
+        .configure(channel::config::Config {
+            timer: &hstimer0,
+            duty_pct: 10,
+            pin_config: channel::config::PinConfig::PushPull,
+        })
+        .unwrap();
+
+    channel0.start_duty_fade(0, 100, 2000).expect_err(
+        "Fading from 0% to 100%, at 24kHz and 5-bit resolution, over 2 seconds, should fail",
+    );
+
     loop {
         channel0.start_duty_fade(0, 100, 1000).unwrap();
         while channel0.is_duty_fade_running() {}
@@ -55,19 +71,19 @@ async fn breathe(channel0: hal::ledc::channel::Channel<'static, HighSpeed, GpioP
         channel0.start_duty_fade(100, 0, 1000).unwrap();
         while channel0.is_duty_fade_running() {}
     }
-} */
+
+}
 
 
-#[embassy_executor::main]
+#[main]
 async fn main(_spawner: Spawner) -> ! {
     let peripherals = Peripherals::take();
-    let mut system = peripherals.DPORT.split();
-    let clocks = ClockControl::boot_defaults(system.clock_control).freeze();
+    let system = peripherals.SYSTEM.split();
+    let clocks = CLOCKS.init(ClockControl::max(system.clock_control).freeze());
 
     let timer_group0 = TimerGroup::new(
         peripherals.TIMG0, 
-        &clocks,
-        &mut system.peripheral_clock_control,
+        &clocks
     );
     embassy::init(&clocks, timer_group0.timer0);
 
@@ -75,16 +91,19 @@ async fn main(_spawner: Spawner) -> ! {
     let io = gpio::IO::new(peripherals.GPIO, peripherals.IO_MUX);
 
     let mut cpu_control = CpuControl::new(system.cpu_control);
-
     let led_ctrl_signal = &*make_static!(Signal::new());
 
-    let led = io.pins.gpio0.into_push_pull_output();
+    let led = io.pins.gpio12.into_push_pull_output();
+    let servo = io.pins.gpio4.into_push_pull_output();
+    let ledc = make_static!(LEDC::new(peripherals.LEDC, clocks));
+
     let cpu1_fnctn = move || {
-        let executor = make_static!(Executor::new());
-        executor.run(|spawner| {
+        let executor_cpu1 = make_static!(Executor::new());
+        executor_cpu1.run(|spawner| {
             spawner.spawn(control_led(led, led_ctrl_signal)).ok();
         });
     };
+
     let _guard = cpu_control
         .start_app_core(unsafe { &mut APP_CORE_STACK }, cpu1_fnctn)
         .unwrap();
@@ -95,7 +114,9 @@ async fn main(_spawner: Spawner) -> ! {
         get_core() as usize
     );
     let mut ticker = Ticker::every(Duration::from_secs(1));
-    
+
+    _spawner.spawn(control_servo(servo, ledc)).ok();
+
     loop {
         esp_println::println!("Sending LED on");
         led_ctrl_signal.signal(true);
@@ -106,68 +127,4 @@ async fn main(_spawner: Spawner) -> ! {
         ticker.next().await;
     }
 }
-
-/* #[embassy_executor::main]
-async fn main(_spawner: Spawner) -> ! {
-    let peripherals = Peripherals::take();
-    let mut system = peripherals.DPORT.split();
-
-    let clocks = make_static!(ClockControl::max(system.clock_control).freeze());
-
-    let io = gpio::IO::new(peripherals.GPIO, peripherals.IO_MUX);
-    let led = io.pins.gpio4.into_push_pull_output();
-
-    let ledc = make_static!(LEDC::new(peripherals.LEDC, clocks, &mut system.peripheral_clock_control));
-    let hstimer0 = make_static!(ledc.get_timer::<HighSpeed>(timer::Number::Timer0));
-
-    hstimer0
-    .configure(timer::config::Config {
-        duty: timer::config::Duty::Duty5Bit,
-        clock_source: timer::HSClockSource::APBClk,
-        frequency: 24u32.kHz(),
-    })
-    .unwrap();
-
-    let mut channel0 = ledc.get_channel(channel::Number::Channel0, led);
-    channel0
-        .configure(channel::config::Config {
-            timer: hstimer0,
-            duty_pct: 10,
-            pin_config: channel::config::PinConfig::PushPull,
-        })
-        .unwrap();
-
-    channel0.start_duty_fade(0, 100, 2000).expect_err(
-        "Fading from 0% to 100%, at 24kHz and 5-bit resolution, over 2 seconds, should fail",
-    );
-
-    let timer_group0 = TimerGroup::new(
-        peripherals.TIMG0,
-        &clocks,
-        &mut system.peripheral_clock_control,
-    );
-    
-    embassy::init(&clocks, timer_group0.timer0);
-
-    
-
-    let mut cpu_control = CpuControl::new(system.cpu_control);
-    let led_ctrl_signal = &*make_static!(Signal::new());
-
-    let cpu1_fnctn = move || {
-        let executor = make_static!(Executor::new());
-        executor.run(|spawner| {
-            //spawner.spawn(blink(led_pin)).ok();
-            spawner.spawn(breathe(channel0)).ok();
-        })
-    };
-
-    logger::init_logger_from_env();
-    log::info!("Logger is setup");
-
-    loop {
-        todo!();
-    }
-
-} */
 
