@@ -29,12 +29,27 @@ pub mod rp2040_prelude {
 #[cfg(all(target_os = "none", target_arch = "xtensa", target_vendor = "unknown"))]
 pub mod esp32_prelude {
     #[allow(clippy::single_component_path_imports)]
-    pub use esp_backtrace;
+    pub use embedded_svc::wifi::{AccessPointConfiguration, ClientConfiguration, Configuration, Wifi};
 
-    pub use esp_println::logger;
+    pub use static_cell::{make_static, StaticCell};
+
+
     pub use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, signal::Signal};
     pub use embassy_executor::Spawner;
-    pub use embassy_time::{Duration, Ticker};
+    pub use embassy_time::{Duration, Ticker, Timer};
+    
+    pub use embassy_net::tcp::TcpSocket;
+    pub use embassy_net::{
+        Config, IpListenEndpoint, Ipv4Address, Ipv4Cidr, Stack, StackResources, StaticConfigV4,
+    };
+
+    pub use esp_backtrace;
+    pub use esp_println::{logger, print, println};
+
+    pub use esp_wifi::{initialize, EspWifiInitFor};
+    pub use esp_wifi::wifi::{
+        self, WifiApDevice, WifiController, WifiDevice, WifiEvent, WifiStaDevice, WifiState, WifiError
+    };
 
     pub use hal::{
         clock::ClockControl,
@@ -49,7 +64,8 @@ pub mod esp32_prelude {
         peripherals::Peripherals,
         prelude::*,
         timer::TimerGroup, // Rng,
-        cpu_control::{CpuControl, Stack},
+        cpu_control::{CpuControl, Stack as hal_stack},
         interrupt::Priority,
+        Rng,
     };
 }

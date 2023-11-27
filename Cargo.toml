@@ -13,11 +13,18 @@ license = "MIT OR Apache-2.0"
 [dependencies]
 
 log = ">=0.4"
+
+embedded-svc = { version = "*", default-features = false, features = [] }
+embedded-io = "*"
+embedded-io-async = "*"
+
 embassy-time = {version = "*", features = ["nightly"]}
 embassy-macros = "*"
 embassy-futures = "*"
 embassy-executor = {version = "*", features = ["nightly"]}
 embassy-sync = "*"
+embassy-net = "*"
+
 smoltcp = { version = "^0.10", default-features = false, features = [
     "socket-udp",
     "proto-igmp",

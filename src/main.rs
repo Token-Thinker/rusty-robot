@@ -21,18 +21,20 @@ use esp_println::println;
 use hal::{get_core, clock::Clocks};
 
 pub mod prelude;
+pub mod network_access;
 
 use embassy_executor::Spawner;
 use hal::embassy::executor::Executor;
 use static_cell::{make_static, StaticCell};
 
-static mut APP_CORE_STACK: Stack<8192> = Stack::new();
+static mut APP_CORE_STACK: hal_stack<8192> = hal_stack::new();
 
 static CLOCKS: StaticCell<Clocks> = StaticCell::new();
 
 
 #[allow(unused_imports)]
 use prelude::*;
+use network_access::new_network_service;
 
 #[embassy_executor::task]
 async fn control_led(
@@ -172,6 +174,8 @@ async fn main(_spawner: Spawner) -> ! {
     let mut ticker = Ticker::every(Duration::from_secs(1));
 
     _spawner.spawn(control_servo(servo_pan,servo_tilt, ledc)).ok();
+    _spawner.spawn(new_network_service(_spawner)).ok();
+
 
     loop {
         esp_println::println!("Sending LED on");
