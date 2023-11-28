@@ -52,7 +52,7 @@ pub mod esp32_prelude {
     };
 
     pub use hal::{
-        clock::ClockControl,
+        clock::{ClockControl,Clocks},
         embassy::{self, executor::{Executor, FromCpu1, FromCpu2, InterruptExecutor}},
         gpio::{self, PushPull, Output, GpioPin},
         ledc::{
@@ -67,5 +67,6 @@ pub mod esp32_prelude {
         cpu_control::{CpuControl, Stack as hal_stack},
         interrupt::Priority,
         Rng,
+        get_core
     };
 }

@@ -1,4 +1,13 @@
+//! ## TKR's `Network Access` Module
+//!
+//! This "module" contains embassy async tasks for connecting
+//! to both STA and AP at the same time. The intent is for the 
+//! end user to be able to access the ESP32 front-end either by
+//! perferable connecting to the local wifi or by AP.
+
+
 #[allow(unused_imports)]
+
 use crate::prelude::*;
 
 
@@ -6,23 +15,7 @@ const SSID: &str = env!("SSID");
 const PASSWORD: &str = env!("PASSWORD");
 
 #[embassy_executor::task]
-pub async fn new_network_service(spawner: Spawner){
-    let peripherals = Peripherals::take();
-    let system = peripherals.SYSTEM.split();
-    let clocks = ClockControl::max(system.clock_control).freeze();
-
-    let timer = TimerGroup::new(peripherals.TIMG1, &clocks).timer0;
-    let init = initialize(
-        EspWifiInitFor::Wifi,
-        timer,
-        Rng::new(peripherals.RNG),
-        system.radio_clock_control,
-        &clocks,
-    ).unwrap();
-
-    let wifi = peripherals.WIFI;
-    let (wifi_ap_interface, wifi_sta_interface, mut wifi_controller) =
-        esp_wifi::wifi::new_ap_sta(&init, wifi).unwrap();
+pub async fn new_network_service(spawner: Spawner, wifi_ap_interface: WifiDevice<'static, WifiApDevice>, wifi_sta_interface: WifiDevice<'static, WifiStaDevice>, mut wifi_controller: WifiController<'static>){
 
     let ap_config = Config::ipv4_static(StaticConfigV4 {
         address: Ipv4Cidr::new(Ipv4Address::new(192, 168, 2, 1), 24),
