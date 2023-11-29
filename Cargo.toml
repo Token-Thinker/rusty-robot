@@ -25,6 +25,9 @@ embassy-executor = {version = "*", features = ["nightly"]}
 embassy-sync = "*"
 embassy-net = "*"
 
+picoserve = "0.2.2"
+
+
 smoltcp = { version = "^0.10", default-features = false, features = [
     "socket-udp",
     "proto-igmp",
@@ -37,6 +40,10 @@ smoltcp = { version = "^0.10", default-features = false, features = [
     "medium-ethernet",
 ] }
 static_cell = { version = "2.0.0", features = ["nightly"] }
+
+
+serde = { version = "1.0", default-features = false, features = ["derive"] }
+serde_json = { version = "1.0.108", features = ["alloc"], default-features = false }
 
 
 ##########################################################
@@ -52,6 +59,7 @@ embassy-rp = "*"
 [target.xtensa-esp32-none-elf.dependencies]
 
 esp-println = { version = "^0.6", features = ["log", "esp32"] }
+esp-alloc = { version = "0.3.0" }
 
 hal = { package = "esp32-hal", version = "^0.16", features = [
     "log",
@@ -70,7 +78,6 @@ esp-wifi = { branch = "main", git = "https://github.com/esp-rs/esp-wifi/", featu
     "esp-now",
     "wifi-logs",
     "embassy-net",
-    "embedded-svc",
 ] }
 esp-backtrace = { version = "^0.8", features = [
     "esp32",

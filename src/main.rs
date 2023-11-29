@@ -1,47 +1,50 @@
-/* 
-
-Hardware - GPIO structure
-GPIO2 - Flywheel Motors (High/Low)
-GPI012 - Launcher Servo
-GPIO13 - Tilt Servo
-GPIO16 - Pan Servo
- 
-Aux - GPIOs
-GPIO4 - LED indicator Feedback
-GPIO 2/4/12/13/14/15 - microSD Recording subprocess [requires other gpios to be disabled] 
-
-*/
-
 #![no_std]
 #![no_main]
 #![feature(type_alias_impl_trait)]
+#![feature(async_fn_in_trait)]
 
 pub mod prelude;
 pub mod network_access;
-pub mod new;
+pub mod hw_fn;
 
 
-/* static mut APP_CORE_STACK: hal_stack<8192> = hal_stack::new();
+/* static mut APP_CORE_STACK: hal_stack<8192> = hal_stack::new(); */
 
-static CLOCKS: StaticCell<Clocks> = StaticCell::new(); */
 
+use core::mem::MaybeUninit;
 
 #[allow(unused_imports)]
 use prelude::*;
-use network_access::new_network_service;
-//use new::{control_led, control_servo,enable_disable_led};
+use network_access::*;
+use hw_fn::{control_led, control_servo,enable_disable_led};
+
+
+#[global_allocator]
+static ALLOCATOR: esp_alloc::EspHeap = esp_alloc::EspHeap::empty();
+
+fn init_heap() {
+    const HEAP_SIZE: usize = 32 * 1024;
+    static mut HEAP: MaybeUninit<[u8; HEAP_SIZE]> = MaybeUninit::uninit();
+
+    unsafe {
+        ALLOCATOR.init(HEAP.as_mut_ptr() as *mut u8, HEAP_SIZE);
+    }
+}
 
 #[main]
 async fn main(_spawner: Spawner){
+    init_heap();
     let peripherals = Peripherals::take();
     let system = peripherals.SYSTEM.split();
-    //let clocks = CLOCKS.init(ClockControl::max(system.clock_control).freeze());
     let clocks = ClockControl::max(system.clock_control).freeze();
 
+    //Embassy Configurations
     let timer_group0 = TimerGroup::new(peripherals.TIMG0, &clocks );
+    embassy::init(&clocks, timer_group0.timer0);
+
+    //Network Services Configurations
     let timer = TimerGroup::new(peripherals.TIMG1, &clocks).timer0;
-
-
+    let config = Config::dhcpv4(Default::default());
     let init = initialize(
         EspWifiInitFor::Wifi,
         timer,
@@ -51,34 +54,46 @@ async fn main(_spawner: Spawner){
     ).unwrap();
 
     let wifi = peripherals.WIFI;
-    let (wifi_ap_interface, wifi_sta_interface, wifi_controller) =
-        esp_wifi::wifi::new_ap_sta(&init, wifi).unwrap();
+    
+    let (wifi_interface, controller) = 
+    esp_wifi::wifi::new_with_mode(&init, wifi, WifiStaDevice).unwrap();
 
-    embassy::init(&clocks, timer_group0.timer0);
+    let seed = 1234; // very random, very secure seed
 
-/*     let io = gpio::IO::new(peripherals.GPIO, peripherals.IO_MUX);
+    // Init network stack
+    let stack = &*make_static!(Stack::new(
+        wifi_interface,
+        config,
+        make_static!(StackResources::<3>::new()),
+        seed
+    ));
 
-    let mut cpu_control = CpuControl::new(system.cpu_control);
+    let pico_config = make_static!(picoserve::Config {
+        start_read_request_timeout: Some(Duration::from_secs(5)),
+        read_request_timeout: Some(Duration::from_secs(1)),
+    });
+
+    
+
+    let io = gpio::IO::new(peripherals.GPIO, peripherals.IO_MUX);
+
+    //Flywheel Motor Configurations
     let led_ctrl_signal = &*make_static!(Signal::new());
-
     let led = io.pins.gpio4.into_push_pull_output();
-    let servo_pan = io.pins.gpio16.into_push_pull_output();
+    
+
+    //Servo Motors Configurations
+    let ledc = make_static!(LEDC::new(peripherals.LEDC, make_static!(clocks)));
     let servo_tilt = io.pins.gpio13.into_push_pull_output();
-    let ledc = make_static!(LEDC::new(peripherals.LEDC, clocks));
+    let servo_pan = io.pins.gpio16.into_push_pull_output();
 
-    let cpu1_fnctn = move || {
-        let executor_cpu1 = make_static!(Executor::new());
-        executor_cpu1.run(|spawner| {
-            spawner.spawn(control_led(led, led_ctrl_signal)).ok();
-        });
-    };
 
-    let _guard = cpu_control
-        .start_app_core(unsafe { &mut APP_CORE_STACK }, cpu1_fnctn)
-        .unwrap();
-
+    
     _spawner.spawn(enable_disable_led(led_ctrl_signal)).ok();
-    _spawner.spawn(control_servo(servo_pan,servo_tilt, ledc)).ok(); */
-    _spawner.spawn(new_network_service(_spawner, wifi_ap_interface, wifi_sta_interface, wifi_controller)).ok();
+    _spawner.spawn(control_led(led, led_ctrl_signal)).ok();
+    _spawner.spawn(control_servo(servo_tilt, servo_pan, ledc)).ok();
+    _spawner.spawn(connection(controller)).ok();
+    _spawner.spawn(net_task(stack)).ok();
+    //_spawner.spawn(web_task(stack,pico_config)).ok();
 }
 

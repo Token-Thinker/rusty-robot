@@ -30,11 +30,12 @@ pub mod rp2040_prelude {
 pub mod esp32_prelude {
     #[allow(clippy::single_component_path_imports)]
     pub use embedded_svc::wifi::{AccessPointConfiguration, ClientConfiguration, Configuration, Wifi};
-
     pub use static_cell::{make_static, StaticCell};
 
+    pub use picoserve::{Router, routing::get, response::IntoResponse, extract::{State, Form}};
 
-    pub use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, signal::Signal};
+
+    pub use embassy_sync::{channel::{Channel, Receiver, Sender},blocking_mutex::raw::{CriticalSectionRawMutex,NoopRawMutex}, signal::Signal};
     pub use embassy_executor::Spawner;
     pub use embassy_time::{Duration, Ticker, Timer};
     
