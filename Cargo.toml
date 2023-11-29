@@ -7,6 +7,8 @@ edition = "2021"
 license = "MIT OR Apache-2.0"
 
 
+
+
 ##########################################################
 #               Core Project Dependencies                #
 ##########################################################
@@ -25,7 +27,7 @@ embassy-executor = {version = "*", features = ["nightly"]}
 embassy-sync = "*"
 embassy-net = "*"
 
-picoserve = "0.2.2"
+picoserve = "^0.2.2"
 
 
 smoltcp = { version = "^0.10", default-features = false, features = [
@@ -39,27 +41,27 @@ smoltcp = { version = "^0.10", default-features = false, features = [
     "socket-dhcpv4",
     "medium-ethernet",
 ] }
-static_cell = { version = "2.0.0", features = ["nightly"] }
+static_cell = { version = "^2.0.0", features = ["nightly"] }
 
 
-serde = { version = "1.0", default-features = false, features = ["derive"] }
-serde_json = { version = "1.0.108", features = ["alloc"], default-features = false }
+serde = { version = "^1.0", default-features = false, features = ["derive"] }
+serde_json = { version = "^1.0.108", features = ["alloc"], default-features = false }
 
 
 ##########################################################
-#              RP2040-Specific Dependencies               #
+#              RP2040-Specific Dependencies              #
 ##########################################################
 [target.thumbv6m-none-eabi.dependencies]
 
 embassy-rp = "*"
 
 ##########################################################
-#              ESP32-Specific Dependencies                #
+#              ESP32-Specific Dependencies               #
 ##########################################################
 [target.xtensa-esp32-none-elf.dependencies]
 
 esp-println = { version = "^0.6", features = ["log", "esp32"] }
-esp-alloc = { version = "0.3.0" }
+esp-alloc = { version = "^0.3.0" }
 
 hal = { package = "esp32-hal", version = "^0.16", features = [
     "log",

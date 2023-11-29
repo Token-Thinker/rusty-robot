@@ -12,7 +12,7 @@ use core::mem::MaybeUninit;
 #[allow(unused_imports)]
 use prelude::*;
 use network_access::*;
-//use hw_fn::{control_led, control_servo,enable_disable_led};
+use hw_fn::{control_led, control_servo,enable_disable_led};
 
 
 #[global_allocator]
@@ -33,7 +33,7 @@ async fn main(_spawner: Spawner){
     let peripherals = Peripherals::take();
     let system = peripherals.SYSTEM.split();
     let clocks = ClockControl::max(system.clock_control).freeze();
-    //let io = gpio::IO::new(peripherals.GPIO, peripherals.IO_MUX);
+    let io = gpio::IO::new(peripherals.GPIO, peripherals.IO_MUX);
 
 
     //Embassy Configurations
@@ -72,7 +72,7 @@ async fn main(_spawner: Spawner){
     });
 
     
-/*     //Flywheel Motor Configurations
+    //Flywheel Motor Configurations
     let led_ctrl_signal = &*make_static!(Signal::new());
     let led = io.pins.gpio4.into_push_pull_output();
     
@@ -84,11 +84,12 @@ async fn main(_spawner: Spawner){
 
 
     //Spawner Functions
-    _spawner.spawn(enable_disable_led(led_ctrl_signal)).ok();
-    _spawner.spawn(control_led(led, led_ctrl_signal)).ok();
-    _spawner.spawn(control_servo(servo_tilt, servo_pan, ledc)).ok(); */
     _spawner.spawn(connection(controller)).ok();
     _spawner.spawn(net_task(stack)).ok();
     _spawner.spawn(web_task(stack,pico_config)).ok();
+    _spawner.spawn(enable_disable_led(led_ctrl_signal)).ok();
+    _spawner.spawn(control_led(led, led_ctrl_signal)).ok();
+    _spawner.spawn(control_servo(servo_tilt, servo_pan, ledc)).ok();
+
 }
 
