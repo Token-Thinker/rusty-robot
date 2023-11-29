@@ -43,8 +43,8 @@ pub async fn web_task(
     config: &'static picoserve::Config<Duration>,
     //sender: Sender<'static, NoopRawMutex, MoveCommand,QUEUE_SIZE>
 ) -> ! {
-    let mut rx_buffer = [0; 1024];
-    let mut tx_buffer = [0; 1024];
+    let mut rx_buffer = [0; 1536];
+    let mut tx_buffer = [0; 1536];
 
     loop {
         if stack.is_link_up() {

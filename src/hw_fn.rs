@@ -31,11 +31,11 @@ pub async fn enable_disable_led(control: &'static Signal<CriticalSectionRawMutex
     );
     let mut ticker = Ticker::every(Duration::from_secs(1));
     loop {
-        esp_println::println!("Sending LED on");
+        //esp_println::println!("Sending LED on");
         control.signal(true);
         ticker.next().await;
 
-        esp_println::println!("Sending LED off");
+        //esp_println::println!("Sending LED off");
         control.signal(false);
         ticker.next().await;
     }
@@ -49,10 +49,10 @@ pub async fn control_led(
     println!("Starting control_led() on core {}", get_core() as usize);
     loop {
         if control.wait().await {
-            esp_println::println!("LED on");
+            //esp_println::println!("LED on");
             led.set_low().unwrap();
         } else {
-            esp_println::println!("LED off");
+            //esp_println::println!("LED off");
             led.set_high().unwrap();
         }
     }
@@ -102,11 +102,11 @@ pub async fn control_servo(
         (((value - min_in) * (max_out - min_out) as f32) / (max_in - min_in) + min_out as f32) as u8
     }
 
-    let mut channel1: channel::Channel<'_, HighSpeed, GpioPin<Output<PushPull>, 16>> = ledc.get_channel(channel::Number::Channel1, servo_pan);
-    let mut channel2 = ledc.get_channel(channel::Number::Channel2, servo_tilt);
+    let mut pan_channel: channel::Channel<'_, HighSpeed, GpioPin<Output<PushPull>, 16>> = ledc.get_channel(channel::Number::Channel1, servo_pan);
+    let mut tilt_channel = ledc.get_channel(channel::Number::Channel2, servo_tilt);
     println!("Channel configured");
 
-    channel1
+    pan_channel
         .configure(channel::config::Config {
             timer: &hstimer1,
             duty_pct: 10,
@@ -114,36 +114,36 @@ pub async fn control_servo(
         })
         .unwrap();
 
-    channel2
+    tilt_channel
     .configure(channel::config::Config {
         timer: &hstimer1,
         duty_pct: 10,
         pin_config: channel::config::PinConfig::PushPull,
     })
     .unwrap();
-    println!("Channel initialization complete, starting sweep");
+    println!("Channel initialization complete");
 
     // Function to handle command
-    fn handle_command(command: &str, channel1: &mut channel::Channel<'_, HighSpeed, GpioPin<Output<PushPull>, 16>>, channel2: &mut channel::Channel<'_, HighSpeed, GpioPin<Output<PushPull>, 13>>) {
+    fn handle_command(command: &str, pan_channel: &mut channel::Channel<'_, HighSpeed, GpioPin<Output<PushPull>, 16>>, tilt_channel: &mut channel::Channel<'_, HighSpeed, GpioPin<Output<PushPull>, 13>>) {
         let parts: alloc::vec::Vec< &str>  = command.split(':').collect();
         if parts.len() == 2 {
             if let (Ok(x_axis_value), Ok(y_axis_value)) = (parts[0].parse::<f32>(), parts[1].parse::<f32>()) {
-                let servo1_position = map_value(x_axis_value, -100.0, 100.0, 0, 180);
-                let servo2_position = map_value(y_axis_value, -125.0, 125.0, 0, 180);
+                let pan_position = map_value(x_axis_value, -100.0, 100.0, 0, 180);
+                let tilt_position = map_value(y_axis_value, -125.0, 125.0, 0, 180);
 
-                let duty1 = angle_to_duty(servo1_position);
-                let duty2 = angle_to_duty(servo2_position);
+                let duty1 = angle_to_duty(pan_position);
+                let duty2 = angle_to_duty(tilt_position);
 
-                channel1.set_duty_hw(duty1);
-                channel2.set_duty_hw(duty2);
+                pan_channel.set_duty_hw(duty1);
+                tilt_channel.set_duty_hw(duty2);
 
-                println!("Servo 1 Position: {}, Servo 2 Position: {}", servo1_position, servo2_position);
+                println!("Pan Position: {}, Tilt Position: {}", pan_position, tilt_position);
             }
         }
     }
 
     // Here you call the function with a sample command "50:-30"
-    handle_command("50:-30", &mut channel1, &mut channel2);
+    handle_command("50:-30", &mut pan_channel, &mut tilt_channel);
 
 }
 
