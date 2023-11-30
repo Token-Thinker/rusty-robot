@@ -4,16 +4,15 @@
 #![feature(async_fn_in_trait)]
 
 pub mod prelude;
-pub mod network_access;
-pub mod hw_fn;
-pub mod website;
-
-use core::mem::MaybeUninit;
+pub mod network;
+pub mod hardware;
 
 #[allow(unused_imports)]
 use prelude::*;
-use network_access::*;
-use hw_fn::{control_led, control_servo,enable_disable_led};
+use network::server::*;
+use hardware::hw::*;
+
+use core::mem::MaybeUninit;
 
 
 #[global_allocator]

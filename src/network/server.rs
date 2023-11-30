@@ -1,16 +1,16 @@
-//! ## TKR's `Network Access` Module
+//! ## TKR's `Server` Module
 //!
-//! This "module" contains embassy async tasks for connecting
-//! to both STA and AP at the same time. The intent is for the 
-//! end user to be able to access the ESP32 front-end either by
-//! perferable connecting to the local wifi or by AP.
+//! This "module" contains embassy async tasks for creating a
+//! server using `picoserve` crate. The intent is for the 
+//! end user to be able to access the ESP32 front-end by using
+//! the ip address obtained and port 8080.
 
 
 #[allow(unused_imports)]
 
 use crate::prelude::*;
 extern crate alloc;
-use crate::website::*;
+use crate::network::http::*;
 
 use picoserve::{Router, routing::get, response::IntoResponse};
 
@@ -34,17 +34,19 @@ impl picoserve::Timer for EmbassyTimer {
     }
 }
 
-/* async fn get_site() -> impl IntoResponse {
+
+pub async fn get_site() -> impl IntoResponse {
     (
-        [("Content-Type", "text/html; charset=utf-8")],
-        "<html>\
-            <body>\
-                <h1>Hello Rust!</h1>\
-            </body>\
-        </html>\r\n"
+        [
+            ("Content-Type", "text/html; charset=utf-8"),
+            ("Content-Encoding", "gzip")
+        ],
+
+        INDEX_HTML_GZ
     )
 }
- */
+
+
 #[embassy_executor::task]
 pub async fn web_task(
     stack: &'static Stack<WifiDevice<'static, WifiStaDevice>>,
