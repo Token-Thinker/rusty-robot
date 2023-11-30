@@ -33,8 +33,15 @@ impl picoserve::Timer for EmbassyTimer {
     }
 }
 
-async fn get_root()-> impl IntoResponse {
-    "Hello World"
+async fn get_site() -> impl IntoResponse {
+    (
+        [("Content-Type", "text/html; charset=utf-8")],
+        "<html>\
+            <body>\
+                <h1>Hello Rust!</h1>\
+            </body>\
+        </html>\r\n"
+    )
 }
 
 #[embassy_executor::task]
@@ -65,8 +72,8 @@ pub async fn web_task(
     loop {
         let mut socket = embassy_net::tcp::TcpSocket::new(stack, &mut rx_buffer, &mut tx_buffer);
 
-        log::info!("Listening on TCP:80...");
-        if let Err(e) = socket.accept(80).await {
+        log::info!("Listening on TCP:8080...");
+        if let Err(e) = socket.accept(8080).await {
             log::warn!("accept error: {:?}", e);
             continue;
         }
@@ -79,7 +86,7 @@ pub async fn web_task(
         let (socket_rx, socket_tx) = socket.split();
 
         let app = Router::new()
-            .route("/", get(get_root))
+            .route("/", get(get_site))
         ;
 
         match picoserve::serve(
