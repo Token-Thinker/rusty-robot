@@ -10,6 +10,7 @@
 
 use crate::prelude::*;
 extern crate alloc;
+use crate::website::*;
 
 use picoserve::{Router, routing::get, response::IntoResponse};
 
@@ -33,7 +34,7 @@ impl picoserve::Timer for EmbassyTimer {
     }
 }
 
-async fn get_site() -> impl IntoResponse {
+/* async fn get_site() -> impl IntoResponse {
     (
         [("Content-Type", "text/html; charset=utf-8")],
         "<html>\
@@ -43,7 +44,7 @@ async fn get_site() -> impl IntoResponse {
         </html>\r\n"
     )
 }
-
+ */
 #[embassy_executor::task]
 pub async fn web_task(
     stack: &'static Stack<WifiDevice<'static, WifiStaDevice>>,

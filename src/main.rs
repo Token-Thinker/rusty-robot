@@ -6,6 +6,7 @@
 pub mod prelude;
 pub mod network_access;
 pub mod hw_fn;
+pub mod website;
 
 use core::mem::MaybeUninit;
 
