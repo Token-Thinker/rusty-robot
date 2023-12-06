@@ -48,7 +48,7 @@ pub async fn get_site() -> impl IntoResponse {
 
 
 #[embassy_executor::task]
-pub async fn web_task(
+pub async fn server(
     stack: &'static Stack<WifiDevice<'static, WifiStaDevice>>,
     config: &'static picoserve::Config<Duration>,
     //sender: Sender<'static, NoopRawMutex, MoveCommand,QUEUE_SIZE>
@@ -75,8 +75,8 @@ pub async fn web_task(
     loop {
         let mut socket = embassy_net::tcp::TcpSocket::new(stack, &mut rx_buffer, &mut tx_buffer);
 
-        log::info!("Listening on TCP:8080...");
-        if let Err(e) = socket.accept(8080).await {
+        log::info!("Listening on TCP:80...");
+        if let Err(e) = socket.accept(80).await {
             log::warn!("accept error: {:?}", e);
             continue;
         }
@@ -90,7 +90,12 @@ pub async fn web_task(
 
         let app = Router::new()
             .route("/", get(get_site))
-        ;
+            .route(
+                "/ws",
+                get(|upgrade: picoserve::response::ws::WebSocketUpgrade| {
+                upgrade.on_upgrade(crate::network::websockets::WebsocketHandler {})
+                }),
+    );
 
         match picoserve::serve(
             &app,
