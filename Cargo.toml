@@ -6,6 +6,9 @@ authors = ["Michael Guerrier <token.thinkers@gmail.com>"]
 edition = "2021"
 license = "MIT OR Apache-2.0"
 
+[profile.dev.package.esp-wifi]
+opt-level = 3
+
 
 
 
@@ -23,14 +26,14 @@ embedded-io-async = "*"
 embassy-time = {version = "*", features = ["nightly"]}
 embassy-macros = "*"
 embassy-futures = "*"
-embassy-executor = {version = "*", features = ["nightly"]}
+embassy-executor = {version = "^0.3.3", features = ["nightly"]}
 embassy-sync = "*"
 embassy-net = "*"
 
-picoserve = "^0.2.2"
+picoserve = "*"
 
 
-smoltcp = { version = "^0.10", default-features = false, features = [
+smoltcp = { version = "*", default-features = false, features = [
     "socket-udp",
     "proto-igmp",
     "proto-ipv4",
@@ -41,11 +44,11 @@ smoltcp = { version = "^0.10", default-features = false, features = [
     "socket-dhcpv4",
     "medium-ethernet",
 ] }
-static_cell = { version = "^2.0.0", features = ["nightly"] }
+static_cell = { version = "*", features = ["nightly"] }
 
 
-serde = { version = "^1.0", default-features = false, features = ["derive"] }
-serde_json = { version = "^1.0.108", features = ["alloc"], default-features = false }
+serde = { version = "*", default-features = false, features = ["derive"] }
+serde_json = { version = "*", features = ["alloc"], default-features = false }
 
 
 ##########################################################
@@ -60,10 +63,10 @@ embassy-rp = "*"
 ##########################################################
 [target.xtensa-esp32-none-elf.dependencies]
 
-esp-println = { version = "^0.6", features = ["log", "esp32"] }
-esp-alloc = { version = "^0.3.0" }
+esp-println = { version = "*", features = ["log", "esp32"] }
+esp-alloc = { version = "*" }
 
-hal = { package = "esp32-hal", version = "^0.16", features = [
+hal = { package = "esp32-hal", version = "*", features = [
     "log",
     "async",
     "embassy",
@@ -72,7 +75,7 @@ hal = { package = "esp32-hal", version = "^0.16", features = [
     "embassy-executor-thread",
     "embassy-executor-interrupt",
 ] }
-esp-wifi = { branch = "main", git = "https://github.com/esp-rs/esp-wifi/", features = [
+esp-wifi = {version = "*", features = [
     "wifi",
     "async",
     "esp32",
@@ -81,66 +84,9 @@ esp-wifi = { branch = "main", git = "https://github.com/esp-rs/esp-wifi/", featu
     "wifi-logs",
     "embassy-net",
 ] }
-esp-backtrace = { version = "^0.8", features = [
+esp-backtrace = { version = "*", features = [
     "esp32",
     "print-uart",
     "panic-handler",
     "exception-handler",
 ] }
-
-#[target.xtensa-esp32-none-elf.dependencies.hal]
-#
-#package = "esp32-hal"
-#version = "^0.15"
-#features = [
-#    "log",
-#    "async",
-#    "embassy",
-#    "vectored",
-#    "embassy-time-timg0",
-#    "embassy-executor-thread",
-#    "embassy-executor-interrupt",
-#]
-#
-#[target.xtensa-esp32-none-elf.dependencies.esp-wifi]
-#
-#branch = "main"
-#features = [
-#    "wifi",
-#    "async",
-#    "esp32",
-#    "utils",
-#    "esp-now",
-#    "wifi-logs",
-#    "embassy-net",
-#    "embedded-svc",
-#]
-#git = "https://github.com/esp-rs/esp-wifi/"
-#
-#
-#[target.xtensa-esp32-none-elf.dependencies.esp-backtrace]
-#
-#version = "^0.8"
-#features = [
-#    "esp32",
-#    "print-uart",
-#    "panic-handler",
-#    "exception-handler",
-#]
-#
-#
-#[target.xtensa-esp32-none-elf.dependencies.smoltcp]
-#
-#version = "^0.10"
-#default-features = false
-#features = [
-#    "socket-udp",
-#    "proto-igmp",
-#    "proto-ipv4",
-#    "socket-raw",
-#    "socket-tcp",
-#    "socket-icmp",
-#    "proto-dhcpv4",
-#    "socket-dhcpv4",
-#    "medium-ethernet",
-#]

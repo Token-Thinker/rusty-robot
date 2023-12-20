@@ -5,7 +5,7 @@
 
 pub mod prelude;
 pub mod network;
-pub mod hardware;
+//pub mod hardware;
 
 #[allow(unused_imports)]
 use prelude::*;
@@ -19,7 +19,7 @@ use core::mem::MaybeUninit;
 static ALLOCATOR: esp_alloc::EspHeap = esp_alloc::EspHeap::empty();
 
 fn init_heap() {
-    const HEAP_SIZE: usize = 32 * 1024;
+    const HEAP_SIZE: usize = 64 * 1024;
     static mut HEAP: MaybeUninit<[u8; HEAP_SIZE]> = MaybeUninit::uninit();
 
     unsafe {
@@ -56,19 +56,20 @@ async fn main(_spawner: Spawner){
     let (wifi_interface, controller) = 
     esp_wifi::wifi::new_with_mode(&init, wifi, WifiStaDevice).unwrap();
 
-    let seed = 1234; // very random, very secure seed
+    let seed = 1234;
 
     // Init network stack
     let stack = &*make_static!(Stack::new(
         wifi_interface,
         config,
-        make_static!(StackResources::<3>::new()),
+        make_static!(StackResources::<4>::new()),
         seed
     ));
 
     let pico_config = make_static!(picoserve::Config {
         start_read_request_timeout: Some(Duration::from_secs(5)),
         read_request_timeout: Some(Duration::from_secs(1)),
+        write_timeout: Some(Duration::from_secs(5)),
     });
 
     
@@ -86,7 +87,8 @@ async fn main(_spawner: Spawner){
     //Spawner Functions
     _spawner.spawn(connection(controller)).ok();
     _spawner.spawn(net_task(stack)).ok();
-    _spawner.spawn(server(stack,pico_config)).ok();
+    _spawner.spawn(server(stack,pico_config, _spawner)).ok();
+
     //_spawner.spawn(enable_disable_led(led_ctrl_signal)).ok();
     //_spawner.spawn(control_led(led, led_ctrl_signal)).ok();
     //_spawner.spawn(control_servo(servo_tilt, servo_pan, ledc)).ok();

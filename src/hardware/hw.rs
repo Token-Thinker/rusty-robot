@@ -20,9 +20,6 @@
 use crate::prelude::*;
 extern crate alloc;
 
-
-//Control Flywheel Motors Task  ####################################################################################################
-
 #[embassy_executor::task]
 pub async fn enable_disable_led(control: &'static Signal<CriticalSectionRawMutex, bool>) {
     println!(
@@ -58,11 +55,6 @@ pub async fn control_led(
     }
 }
 
-//#######################################################################################################################
-
-
-
-// Control Servo Task ##################################################################################################
 #[embassy_executor::task]
 pub async fn control_servo(
     servo_tilt: GpioPin<Output<PushPull>, 13>,
@@ -146,5 +138,3 @@ pub async fn control_servo(
     handle_command("50:-30", &mut pan_channel, &mut tilt_channel);
 
 }
-
-//#######################################################################################################################
