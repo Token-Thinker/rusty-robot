@@ -46,15 +46,15 @@ pub async fn get_site() -> impl IntoResponse {
     )
 }
 
-
 #[embassy_executor::task]
 pub async fn server(
     stack: &'static Stack<WifiDevice<'static, WifiStaDevice>>,
     config: &'static picoserve::Config<Duration>,
     //sender: Sender<'static, NoopRawMutex, MoveCommand,QUEUE_SIZE>
+    spawner: Spawner
 ) -> ! {
-    let mut rx_buffer = [0; 1536];
-    let mut tx_buffer = [0; 1536];
+    let mut rx_buffer = [0; 1024];
+    let mut tx_buffer = [0; 1024];
 
     loop {
         if stack.is_link_up() {
@@ -72,6 +72,10 @@ pub async fn server(
         Timer::after(Duration::from_millis(500)).await;
     }
 
+    println!("Starting WS Communication...");
+    spawner.spawn(servo_server(stack, config)).ok();
+    spawner.spawn(motor_server(stack, config)).ok();
+
     loop {
         let mut socket = embassy_net::tcp::TcpSocket::new(stack, &mut rx_buffer, &mut tx_buffer);
 
@@ -88,20 +92,14 @@ pub async fn server(
 
         let (socket_rx, socket_tx) = socket.split();
 
-        let app = Router::new()
-            .route("/", get(get_site))
-            .route(
-                "/ws",
-                get(|upgrade: picoserve::response::ws::WebSocketUpgrade| {
-                upgrade.on_upgrade(crate::network::websockets::WebsocketHandler {})
-                }),
-    );
+        let http_app = Router::new()
+            .route("/", get(get_site));
 
         match picoserve::serve(
-            &app,
+            &http_app,
             EmbassyTimer,
             config,
-            &mut [0; 2048],
+            &mut [0; 1024],
             socket_rx,
             socket_tx,
         )
@@ -111,6 +109,114 @@ pub async fn server(
                 log::info!(
                     "{handled_requests_count} requests handled from {:?}",
                     socket.remote_endpoint()
+                );
+            }
+            Err(err) => log::error!("{err:?}"),
+        }
+    }
+}
+
+#[embassy_executor::task]
+pub async fn servo_server(
+    stack: &'static Stack<WifiDevice<'static, WifiStaDevice>>,
+    config: &'static picoserve::Config<Duration>,
+) -> ! {
+    let mut servo_rx_buffer = [0; 1024];
+    let mut servo_tx_buffer = [0; 1024];
+
+    loop {
+        let mut servo_socket = embassy_net::tcp::TcpSocket::new(stack, &mut servo_rx_buffer, &mut servo_tx_buffer);
+
+        log::info!("Listening on TCP:81...");
+        if let Err(e) = servo_socket.accept(81).await {
+            log::warn!("accept error: {:?}", e);
+            continue;
+        }
+
+        log::info!(
+            "Received connection from {:?}",
+            servo_socket.remote_endpoint()
+        );
+
+        let (servo_socket_rx, servo_socket_tx) = servo_socket.split();
+
+        let servo_app = Router::new()
+                .route(
+                "/ws",
+                get(|upgrade: picoserve::response::ws::WebSocketUpgrade| {
+                upgrade.on_upgrade(crate::network::websockets::WebsocketHandler {})
+                }),
+            );
+
+        
+        match picoserve::serve(
+            &servo_app,
+            EmbassyTimer,
+            config,
+            &mut [0; 1024],
+            servo_socket_rx,
+            servo_socket_tx,
+        )
+        .await
+        {
+            Ok(handled_requests_count) => {
+                log::info!(
+                    "{handled_requests_count} requests handled from {:?}",
+                    servo_socket.remote_endpoint()
+                );
+            }
+            Err(err) => log::error!("{err:?}"),
+        }
+    }
+}
+
+#[embassy_executor::task]
+pub async fn motor_server(
+    stack: &'static Stack<WifiDevice<'static, WifiStaDevice>>,
+    config: &'static picoserve::Config<Duration>,
+) -> ! {
+    let mut motor_rx_buffer = [0; 512];
+    let mut motor_tx_buffer = [0; 512];
+
+    loop {
+        let mut motor_socket = embassy_net::tcp::TcpSocket::new(stack, &mut motor_rx_buffer, &mut motor_tx_buffer);
+
+        log::info!("Listening on TCP:82...");
+        if let Err(e) = motor_socket.accept(82).await {
+            log::warn!("accept error: {:?}", e);
+            continue;
+        }
+
+        log::info!(
+            "Received connection from {:?}",
+            motor_socket.remote_endpoint()
+        );
+
+        let (motor_socket_rx, motor_socket_tx) = motor_socket.split();
+
+        let motor_app = Router::new()
+                .route(
+                "/ws",
+                get(|upgrade: picoserve::response::ws::WebSocketUpgrade| {
+                upgrade.on_upgrade(crate::network::websockets::WebsocketHandler {})
+                }),
+            );
+
+        
+        match picoserve::serve(
+            &motor_app,
+            EmbassyTimer,
+            config,
+            &mut [0; 512],
+            motor_socket_rx,
+            motor_socket_tx,
+        )
+        .await
+        {
+            Ok(handled_requests_count) => {
+                log::info!(
+                    "{handled_requests_count} requests handled from {:?}",
+                    motor_socket.remote_endpoint()
                 );
             }
             Err(err) => log::error!("{err:?}"),
