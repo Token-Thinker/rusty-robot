@@ -11,3 +11,6 @@ target/
 src/network/index.min.html
 src/network/index (copy).html
 Cargo.lock
+src/network/index.html
+src/network/index (copy).min.html
+Cargo.lock
