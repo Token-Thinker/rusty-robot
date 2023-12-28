@@ -10,10 +10,10 @@
 //!     GPIO 16 - Pan Servo
 //!
 //! Functions
-//!     [ ] Turn GPIO2 High/Low via Signal
+//!     [X] Turn GPIO2 High/Low via Signal
 //!     [ ] Push Liner Servo Motor back and for for reload
-//!     [ ] Set Postion of Tilt Servo (Sync)
-//!     [ ] Set Postion of Pan Servo (Sync)
+//!     [X] Set Postion of Tilt Servo (Sync)
+//!     [X] Set Postion of Pan Servo (Sync)
 //!  
 
 #[allow(unused_imports)]
