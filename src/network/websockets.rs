@@ -3,10 +3,14 @@
 #[allow(unused_imports)]
 extern crate alloc;
 
+use crate::network::sginal::*;
 use crate::prelude::*;
 
-use picoserve::{response::{status, ws::Message, WebSocketUpgrade}, ResponseSent, extract::FromRequest};
-
+use picoserve::{
+    extract::FromRequest,
+    response::{status, ws::Message, WebSocketUpgrade},
+    ResponseSent,
+};
 
 struct NewMessageRejection(core::str::Utf8Error);
 
@@ -47,8 +51,6 @@ impl picoserve::response::ws::WebSocketCallback for WebsocketHandler {
         mut rx: picoserve::response::ws::SocketRx<R>,
         mut tx: picoserve::response::ws::SocketTx<W>,
     ) -> Result<(), W::Error> {
-        
-
         let mut message_buffer = [0; 1024];
 
         loop {
@@ -79,8 +81,8 @@ impl picoserve::response::ws::WebSocketCallback for WebsocketHandler {
 }
 
 async fn handle_message<W: picoserve::io::Write>(
-    message: &str, 
-    tx: &mut picoserve::response::ws::SocketTx<W>
+    message: &str,
+    tx: &mut picoserve::response::ws::SocketTx<W>,
 ) -> Result<(), W::Error> {
     if message.starts_with("auth:") {
         println!("Authentication message: {}", message);
@@ -88,19 +90,31 @@ async fn handle_message<W: picoserve::io::Write>(
     } else if message.starts_with("dc:") {
         println!("DC motor message: {}", message);
         tx.send_text("Acknowledged DC motor message").await?;
-    /*     if message == "dc:on" {
-            // Turn on DC motor
-        } else if message == "dc:off" {
-            // Turn off DC motor
-        } else if message == "dc:launch" {
-            // Handle launch command
-        } */
+        match message {
+            "dc:on" => MOTOR_CTRL_SIGNAL.signal(MotorCommand::On),
+            "dc:off" => MOTOR_CTRL_SIGNAL.signal(MotorCommand::Off),
+            "dc:launch" => MOTOR_CTRL_SIGNAL.signal(MotorCommand::Launch),
+            _ => println!("Unknown DC motor command"),
+        }
+    }
+    if message == "servo:0:0" {
+        SERVO_CTRL_SIGNAL.signal(ServoCommand {
+            dx: 0,
+            dy: 0,
+            at_rest: true,
+        });
     } else if message.starts_with("servo:") {
         // Handle servo messages
         let parts: alloc::vec::Vec<&str> = message.split(':').collect();
         if let (Some(dx_str), Some(dy_str)) = (parts.get(1), parts.get(2)) {
             if let (Ok(dx), Ok(dy)) = (dx_str.parse::<i32>(), dy_str.parse::<i32>()) {
                 // Use dx and dy to control the servo
+                let servo_command = ServoCommand {
+                    dx,
+                    dy,
+                    at_rest: false,
+                };
+                SERVO_CTRL_SIGNAL.signal(servo_command);
                 println!("Servo message: dx = {}, dy = {}", dx, dy);
                 //tx.send_text(&format!("Received servo positions: dx = {}, dy = {}", dx, dy)).await?;
             }
@@ -112,17 +126,19 @@ async fn handle_message<W: picoserve::io::Write>(
 struct State;
 
 // WebSocket route handler function
-pub async fn websocket_handler(request: &picoserve::request::Request<'_>) -> impl picoserve::response::IntoResponse {
+pub async fn websocket_handler(
+    request: &picoserve::request::Request<'_>,
+) -> impl picoserve::response::IntoResponse {
     println!("WebSocket upgrade request received");
     let websocket_upgrade = WebSocketUpgrade::from_request(&State, request).await;
     match websocket_upgrade {
         Ok(upgrade) => {
             println!("WebSocket upgrade successful");
             upgrade.on_upgrade(WebsocketHandler {})
-        },
+        }
         Err(_rejection) => {
             println!("WebSocket upgrade failed");
             todo!()
-        },
+        }
     }
 }
