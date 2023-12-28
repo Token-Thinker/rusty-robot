@@ -17,7 +17,7 @@ opt-level = 3
 ##########################################################
 [dependencies]
 
-log = ">=0.4"
+log = "*"
 
 embedded-svc = { version = "*", default-features = false, features = [] }
 embedded-io = "*"
