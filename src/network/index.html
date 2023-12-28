@@ -1,0 +1,910 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+  <title>TkR DASHBOARD</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css" integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous">
+<style>
+html {
+    font-family: Arial, Helvetica, sans-serif; 
+    text-align: center;
+}
+body {  
+    margin: 0;
+}
+h1 {
+    font-size: 1.8rem; 
+    color: white;
+}
+.topnav { 
+    position: sticky;
+    top: 0;
+    overflow: hidden; 
+    background-color: #0A1128;
+    padding: 20px;
+    color: #f2f2f2;
+}
+.grid { 
+    max-width: 600px; 
+    margin: 0 auto; 
+    display: grid; 
+    grid-template-columns: 2fr 1fr;
+    gap: 20px;
+    padding: 50px; 
+}
+.camera-output {
+    border: 1px solid #ccc;
+    box-shadow: 2px 2px 12px 1px rgba(140,140,140,.5);
+}
+.camera-output > img {
+    display:block;
+    width:auto;
+    height:49vh;
+    border-radius:4px;
+    margin-top:8px;
+}
+.controls {
+    background-color: white;
+    padding: 20px 20px 20px;
+    box-shadow: 2px 2px 12px 1px rgba(140,140,140,.5);
+}
+.controls > h3 { 
+    font-size: 1.2rem;
+    font-weight: bold;
+    color: #034078
+}
+.controls > button {
+    background: #ccc;
+    border: 0;
+    color: white;
+    padding: 10px;
+    margin-top: 10px;
+    width: 100%;
+}
+
+
+#joystickContainer {
+    width: 100%;
+    height: 200px; 
+    margin-top: 20px; 
+    background-color: #333;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    border-radius: 7px;
+    touch-action: none;
+    position: relative;
+}
+
+#joystickHandle {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 50px;
+    height: 50px;
+    background-color: #FFF;
+    border: 1px solid #000;
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+}
+
+
+.toggle {
+    width: 70px;
+    height: 30px;
+    position: relative;
+    margin-bottom: 10px;
+}
+
+.toggle input {
+    display: none;
+}
+
+.toggle label {
+    background-color: #ccc;
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: 0.4s;
+    line-height: 30px; /* same as the height of .toggle */
+    text-align: center;
+    color: white;
+    font-size: 0.9rem;
+}
+
+.toggle label::before {
+    content: "Off";
+    position: absolute;
+    width: 100%;
+    height: 30px;
+    left: 0;
+    bottom: 0;
+    background-color: white;
+    border-radius: 5px;
+    transition: 0.4s;
+    line-height: 30px;
+    text-align: center;
+    color: black;
+    font-size: 0.9rem;
+}
+
+.toggle input:checked + label {
+    background-color: #4CAF50;
+}
+
+.toggle input:checked + label::before {
+    transform: translateX(60px);
+    content: "On";
+    border: 1px solid black;
+}
+
+.toggle input:checked + label[for="togglePrimeStandby"] {
+    background-color: #2196F3;
+}
+
+.toggle input:checked + label[for="togglePrimeStandby"]::before {
+    transform: translateX(60px);
+    content: "Prime";
+}
+
+.toggle label[for="togglePrimeStandby"]::before {
+    content: "Standby";
+}
+
+
+#launchBall {
+    border-radius: 50px; /* Rounded corners */
+    background-color: grey; /* Initially grey and unselectable */
+    color: white;
+    padding: 10px 24px;
+    text-align: center;
+    text-decoration: none;
+    display: inline-block;
+    font-size: 16px;
+    margin: 4px 2px;
+    transition-duration: 0.4s;
+    cursor: pointer;
+}
+
+#launchBall:hover {
+    background-color: #555555; /* Darker grey on hover */
+    color: white;
+}
+
+#launchBall:disabled {
+    cursor: not-allowed;
+    background-color: grey;
+}
+
+#launchBall:enabled {
+    background-color: red; /* Red when enabled */
+}
+
+#launchBall:enabled:hover {
+    background-color: #b30000; /* Darker red on hover */
+}
+</style>
+</head>
+<body>
+  <div class="topnav">
+    <h1>TkR CONSOLE - Face Detection and Output Control with WebSockets</h1>
+  </div>
+  <main class="grid">
+    <div class="camera-output">
+      <img id="cameraFeed" src="" alt="Camera Feed">
+    </div>
+    <div class="controls">
+      <h3>Control Options</h3>
+      <div class="toggle">
+        <input type="checkbox" id="toggleOnOff">
+        <label for="toggleOnOff"></label>
+      </div>
+      <div class="toggle">
+        <input type="checkbox" id="togglePrimeStandby">
+        <label for="togglePrimeStandby"></label>
+      </div>
+      <button id="launchBall" disabled>Launch Ball</button>
+        <div id="joystickContainer"></div>
+  
+      <div id="result"></div>
+      
+    </div>
+  </main>
+
+<script> 
+
+var gateway = `ws://${window.location.hostname}/ws`;
+var servoWebsocket;
+var dcMotorWebsocket;
+
+window.addEventListener('load', onLoad);
+
+function onLoad(event) {
+    initWebSocket();
+    initControls();
+}
+
+// WebSocket functions
+function initWebSocket() {
+    console.log('Trying to open a WebSocket connection...');
+    servoWebsocket = new WebSocket(gateway);
+    servoWebsocket.onopen    = onOpenServo;
+    servoWebsocket.onclose   = onCloseServo;
+    servoWebsocket.onerror   = onErrorServo;
+    servoWebsocket.onmessage = onMessageServo;
+
+    dcMotorWebsocket = new WebSocket(gateway);
+    dcMotorWebsocket.onopen    = onOpenDCMotor;
+    dcMotorWebsocket.onclose   = onCloseDCMotor;
+    dcMotorWebsocket.onerror   = onErrorDCMotor;
+    dcMotorWebsocket.onmessage = onMessageDCMotor;
+}
+
+function onOpenServo(event) {
+    console.log('Servo connection opened');
+    servoWebsocket.send("auth:servo");
+}
+
+function onErrorServo(event) {
+    console.error('Servo WebSocket error observed:', event);
+}
+
+function onCloseServo(event) {
+    console.log('Servo connection closed');
+    setTimeout(() => { servoWebsocket = new WebSocket(gateway); }, 2000);
+}
+
+function onMessageServo(event) {
+    console.log('Received servo message: ', event.data);
+}
+
+function onOpenDCMotor(event) {
+    console.log('DC Motor connection opened');
+    dcMotorWebsocket.send("auth:dc");
+}
+
+function onErrorDCMotor(event) {
+    console.error('DC Motor WebSocket error observed:', event);
+}
+
+function onCloseDCMotor(event) {
+    console.log('DC Motor connection closed');
+    setTimeout(() => { dcMotorWebsocket = new WebSocket(gateway); }, 2000);
+}
+
+function onMessageDCMotor(event) {
+    console.log('Received DC motor message: ', event.data);
+}
+
+// Control initialization
+function initControls() {
+    console.log('Initializing Toggle On/Off...');
+    var joystickHandler = new JoystickHandler();
+    //var cameraHandler = new CameraHandler();
+    //initToggleOnOff(joystickHandler, cameraHandler);
+    initToggleOnOff(joystickHandler);
+    initPrimeStandbySwitch();
+    initLaunchBallButton();
+}
+
+function initToggleOnOff(joystickHandler) {
+    document.getElementById("toggleOnOff").addEventListener("click", function() {
+        var joystickEnabled = this.checked;
+        var primeStandbySwitch = document.getElementById("togglePrimeStandby");
+        primeStandbySwitch.disabled = !joystickEnabled;
+    
+        if (!joystickEnabled) {
+            joystickHandler.toggleJoystick(false);
+            //cameraHandler.stopCameraStream();
+            if (servoWebsocket && servoWebsocket.readyState === WebSocket.OPEN) {
+                //websocket.send("sys:off");
+            } else {
+                console.log('Failed to send message: WebSocket is closed');
+            }
+            primeStandbySwitch.checked = false; // set Prime/Standby switch to Standby when turned off
+            document.getElementById("launchBall").disabled = true; // disable launch ball button when turned off
+            console.log('Toggle Off');
+        } else {
+            joystickHandler.toggleJoystick(true);
+            //cameraHandler.startCameraStream();
+            if (servoWebsocket && servoWebsocket.readyState === WebSocket.OPEN) {
+                //websocket.send("sys:on");
+            } else {
+                console.log('Failed to send message: WebSocket is closed');
+            }
+            console.log('Toggle On');
+        }
+    });
+}
+
+function initPrimeStandbySwitch() {
+    var primeStandbySwitch = document.getElementById("togglePrimeStandby");
+    primeStandbySwitch.addEventListener('change', function() {
+        var launchBallButton = document.getElementById("launchBall");
+        launchBallButton.disabled = !this.checked;
+        if (this.checked) {
+            if (dcMotorWebsocket && dcMotorWebsocket.readyState === WebSocket.OPEN) {
+                dcMotorWebsocket.send("dc:on"); // Turn the motor on when the switch is set to Prime
+            } else {
+                console.log('Failed to send message: WebSocket is closed');
+            }
+            console.log('Toggle Prime');
+        } else {
+            if (dcMotorWebsocket && dcMotorWebsocket.readyState === WebSocket.OPEN) {
+                dcMotorWebsocket.send("dc:off"); // Turn the motor off when the switch is set to Standby
+            } else {
+                console.log('Failed to send message: WebSocket is closed');
+            }
+            console.log('Toggle Standby');
+        }
+    });    
+}
+
+
+function initLaunchBallButton() {
+    document.getElementById("launchBall").addEventListener("click", function() {
+        console.log("Launch Ball clicked");
+        if (dcMotorWebsocket && dcMotorWebsocket.readyState === WebSocket.OPEN) {
+            dcMotorWebsocket.send("dc:launch");
+        } else {
+            console.log('Failed to send message: WebSocket is closed');
+        }
+    });
+    var launchBallButton = document.getElementById("launchBall");
+    launchBallButton.disabled = true;
+}
+
+// Joystick handling
+class JoystickHandler {
+    constructor() {
+        this.joystick = null;
+        this.interval = null; // Add this line
+        this.joystickContainer = document.getElementById('joystickContainer');
+        this.joystickContainer.style.pointerEvents = "none";
+    }
+    
+    toggleJoystick(isEnabled) {
+        var outputEl  = document.getElementById('result');
+        if (!isEnabled) {
+            this.joystickContainer.style.pointerEvents = "none";
+            if (this.joystick) {
+                var joystickHandle = document.getElementById('joystickHandle');
+                this.joystickContainer.removeChild(joystickHandle);
+                this.joystick.destroy();
+                this.joystick = null;
+            }
+            if (this.interval) { // Clear interval when joystick is disabled
+                clearInterval(this.interval);
+                this.interval = null;
+            }
+            outputEl.textContent = ''; // Clear the output when joystick is disabled
+        } else {
+            this.joystickContainer.style.pointerEvents = "auto";
+            var joystickHandle = document.createElement('div');
+            joystickHandle.id = 'joystickHandle';
+            this.joystickContainer.appendChild(joystickHandle);
+            this.joystick = this.createJoystick(joystickHandle);
+            this.updateJoystick(joystickHandle, this.joystick);
+        }
+    }    
+    
+    createJoystick(handle) {
+        var joystick = new VirtualJoystick({
+            container: this.joystickContainer,
+            mouseSupport: true,
+        });
+        
+        handle.style.backgroundColor = '#FFFFFF';
+        
+        joystick.addEventListener('touchStartValidation', function(event){
+            return true;
+        });
+    
+        joystick.addEventListener('touchStart', function(){
+            handle.style.backgroundColor = '#FF0000';
+        });
+    
+        joystick.addEventListener('touchEnd', function(){
+            handle.style.backgroundColor = '#FFFFFF';
+        });
+    
+        this.updateJoystick(handle, joystick);
+        return joystick;
+    }
+    
+    updateJoystick(handle, joystick) {
+        let lastDx = null, lastDy = null;  // Keep track of the last known position
+    
+        if (this.interval) {
+            clearInterval(this.interval);
+        }
+    
+        this.interval = setInterval(function() {
+            var dx = joystick.deltaX();
+            var dy = joystick.deltaY();
+            
+            // Only proceed if the joystick's position has changed
+            if (dx !== lastDx || dy !== lastDy) {
+                handle.style.transform = `translate(${dx - 50}%, ${dy - 50}%)`;
+            
+                var outputEl  = document.getElementById('result');
+                outputEl.textContent = 'dx:' + dx + ' dy:' + dy;
+                
+                // send the joystick position as a string in the form "dx:dy" to the WebSocket
+                if (servoWebsocket && servoWebsocket.readyState === WebSocket.OPEN) {
+                    servoWebsocket.send(`servo:${dx}:${dy}`);
+                } else {
+                    console.log('Failed to send message: WebSocket is closed');
+                }
+    
+                console.log(`dx:${dx},dy:${dy}`);
+                
+                // Update the last known position
+                lastDx = dx;
+                lastDy = dy;
+            }
+        }, );
+    }              
+}
+
+
+/*
+class CameraHandler {
+    constructor() {
+        this.cameraOutput = document.getElementById('cameraFeed');
+        try {
+            this.ws = new WebSocket("ws://" + window.location.host + ":82"); // WebSocket for the camera feed
+        } catch (error) {
+            console.error('Failed to construct WebSocket for CameraHandler:', error);
+            this.ws = null; // Set to null so we know it failed
+        }
+    }
+
+    startCameraStream() {
+        if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+            this.ws.send(JSON.stringify({
+                type: "command",
+                command: "streamon"
+            }));
+            this.cameraOutput.src = "http://" + window.location.host + ":81/stream";
+        }
+    }
+
+    stopCameraStream() {
+        if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+            this.ws.send(JSON.stringify({
+                type: "command",
+                command: "streamoff"
+            }));
+        }
+        this.cameraOutput.src = "";
+    }
+}
+*/</script>
+  <script>
+  var VirtualJoystick	= function(opts)
+{
+	opts			= opts			|| {};
+	this._container		= opts.container	|| document.body;
+	this._strokeStyle	= opts.strokeStyle	|| 'cyan';
+	this._stickEl		= opts.stickElement	|| this._buildJoystickStick();
+	this._baseEl		= opts.baseElement	|| this._buildJoystickBase();
+	this._mouseSupport	= opts.mouseSupport !== undefined ? opts.mouseSupport : false;
+	this._stationaryBase	= opts.stationaryBase || false;
+	this._baseX		= this._stickX = opts.baseX || 0
+	this._baseY		= this._stickY = opts.baseY || 0
+	this._limitStickTravel	= opts.limitStickTravel || false
+	this._stickRadius	= opts.stickRadius !== undefined ? opts.stickRadius : 100
+	this._useCssTransform	= opts.useCssTransform !== undefined ? opts.useCssTransform : false
+
+	this._container.style.position	= "relative"
+
+	this._container.appendChild(this._baseEl)
+	this._baseEl.style.position	= "absolute"
+	this._baseEl.style.display	= "none"
+	this._container.appendChild(this._stickEl)
+	this._stickEl.style.position	= "absolute"
+	this._stickEl.style.display	= "none"
+
+	this._pressed	= false;
+	this._touchIdx	= null;
+	
+	if(this._stationaryBase === true){
+		this._baseEl.style.display	= "";
+		this._baseEl.style.left		= (this._baseX - this._baseEl.width /2)+"px";
+		this._baseEl.style.top		= (this._baseY - this._baseEl.height/2)+"px";
+	}
+    
+	this._transform	= this._useCssTransform ? this._getTransformProperty() : false;
+	this._has3d	= this._check3D();
+	
+	var __bind	= function(fn, me){ return function(){ return fn.apply(me, arguments); }; };
+	this._$onTouchStart	= __bind(this._onTouchStart	, this);
+	this._$onTouchEnd	= __bind(this._onTouchEnd	, this);
+	this._$onTouchMove	= __bind(this._onTouchMove	, this);
+	this._container.addEventListener( 'touchstart'	, this._$onTouchStart	, false );
+	this._container.addEventListener( 'touchend'	, this._$onTouchEnd	, false );
+	this._container.addEventListener( 'touchmove'	, this._$onTouchMove	, false );
+	if( this._mouseSupport ){
+		this._$onMouseDown	= __bind(this._onMouseDown	, this);
+		this._$onMouseUp	= __bind(this._onMouseUp	, this);
+		this._$onMouseMove	= __bind(this._onMouseMove	, this);
+		this._container.addEventListener( 'mousedown'	, this._$onMouseDown	, false );
+		this._container.addEventListener( 'mouseup'	, this._$onMouseUp	, false );
+		this._container.addEventListener( 'mousemove'	, this._$onMouseMove	, false );
+	}
+}
+
+VirtualJoystick.prototype.destroy	= function()
+{
+	this._container.removeChild(this._baseEl);
+	this._container.removeChild(this._stickEl);
+
+	this._container.removeEventListener( 'touchstart'	, this._$onTouchStart	, false );
+	this._container.removeEventListener( 'touchend'		, this._$onTouchEnd	, false );
+	this._container.removeEventListener( 'touchmove'	, this._$onTouchMove	, false );
+	if( this._mouseSupport ){
+		this._container.removeEventListener( 'mouseup'		, this._$onMouseUp	, false );
+		this._container.removeEventListener( 'mousedown'	, this._$onMouseDown	, false );
+		this._container.removeEventListener( 'mousemove'	, this._$onMouseMove	, false );
+	}
+}
+
+/**
+ * @returns {Boolean} true if touchscreen is currently available, false otherwise
+*/
+VirtualJoystick.touchScreenAvailable	= function()
+{
+	return 'createTouch' in document ? true : false;
+}
+
+/**
+ * microevents.js - https://github.com/jeromeetienne/microevent.js
+*/
+;(function(destObj){
+	destObj.addEventListener	= function(event, fct){
+		if(this._events === undefined) 	this._events	= {};
+		this._events[event] = this._events[event]	|| [];
+		this._events[event].push(fct);
+		return fct;
+	};
+	destObj.removeEventListener	= function(event, fct){
+		if(this._events === undefined) 	this._events	= {};
+		if( event in this._events === false  )	return;
+		this._events[event].splice(this._events[event].indexOf(fct), 1);
+	};
+	destObj.dispatchEvent		= function(event /* , args... */){
+		if(this._events === undefined) 	this._events	= {};
+		if( this._events[event] === undefined )	return;
+		var tmpArray	= this._events[event].slice(); 
+		for(var i = 0; i < tmpArray.length; i++){
+			var result	= tmpArray[i].apply(this, Array.prototype.slice.call(arguments, 1))
+			if( result !== undefined )	return result;
+		}
+		return undefined
+	};
+})(VirtualJoystick.prototype);
+
+//////////////////////////////////////////////////////////////////////////////////
+//										//
+//////////////////////////////////////////////////////////////////////////////////
+
+VirtualJoystick.prototype.deltaX	= function(){ return this._stickX - this._baseX;	}
+VirtualJoystick.prototype.deltaY	= function(){ return this._stickY - this._baseY;	}
+
+VirtualJoystick.prototype.up	= function(){
+	if( this._pressed === false )	return false;
+	var deltaX	= this.deltaX();
+	var deltaY	= this.deltaY();
+	if( deltaY >= 0 )				return false;
+	if( Math.abs(deltaX) > 2*Math.abs(deltaY) )	return false;
+	return true;
+}
+VirtualJoystick.prototype.down	= function(){
+	if( this._pressed === false )	return false;
+	var deltaX	= this.deltaX();
+	var deltaY	= this.deltaY();
+	if( deltaY <= 0 )				return false;
+	if( Math.abs(deltaX) > 2*Math.abs(deltaY) )	return false;
+	return true;	
+}
+VirtualJoystick.prototype.right	= function(){
+	if( this._pressed === false )	return false;
+	var deltaX	= this.deltaX();
+	var deltaY	= this.deltaY();
+	if( deltaX <= 0 )				return false;
+	if( Math.abs(deltaY) > 2*Math.abs(deltaX) )	return false;
+	return true;	
+}
+VirtualJoystick.prototype.left	= function(){
+	if( this._pressed === false )	return false;
+	var deltaX	= this.deltaX();
+	var deltaY	= this.deltaY();
+	if( deltaX >= 0 )				return false;
+	if( Math.abs(deltaY) > 2*Math.abs(deltaX) )	return false;
+	return true;	
+}
+
+//////////////////////////////////////////////////////////////////////////////////
+//										//
+//////////////////////////////////////////////////////////////////////////////////
+
+VirtualJoystick.prototype._onUp	= function()
+{
+	this._pressed	= false; 
+	this._stickEl.style.display	= "none";
+	
+	if(this._stationaryBase == false){	
+		this._baseEl.style.display	= "none";
+	
+		this._baseX	= this._baseY	= 0;
+		this._stickX	= this._stickY	= 0;
+	}
+}
+
+VirtualJoystick.prototype._onDown	= function(x, y)
+{
+	this._pressed	= true; 
+	if(this._stationaryBase == false){
+		this._baseX	= x;
+		this._baseY	= y;
+		this._baseEl.style.display	= "";
+		this._move(this._baseEl.style, (this._baseX - this._baseEl.width /2), (this._baseY - this._baseEl.height/2));
+	}
+	
+	this._stickX	= x;
+	this._stickY	= y;
+	
+	if(this._limitStickTravel === true){
+		var deltaX	= this.deltaX();
+		var deltaY	= this.deltaY();
+		var stickDistance = Math.sqrt( (deltaX * deltaX) + (deltaY * deltaY) );
+		if(stickDistance > this._stickRadius){
+			var stickNormalizedX = deltaX / stickDistance;
+			var stickNormalizedY = deltaY / stickDistance;
+			
+			this._stickX = stickNormalizedX * this._stickRadius + this._baseX;
+			this._stickY = stickNormalizedY * this._stickRadius + this._baseY;
+		} 	
+	}
+	
+	this._stickEl.style.display	= "";
+	this._move(this._stickEl.style, (this._stickX - this._stickEl.width /2), (this._stickY - this._stickEl.height/2));	
+}
+
+VirtualJoystick.prototype._onMove	= function(x, y)
+{
+	if( this._pressed === true ){
+		this._stickX	= x;
+		this._stickY	= y;
+		
+		if(this._limitStickTravel === true){
+			var deltaX	= this.deltaX();
+			var deltaY	= this.deltaY();
+			var stickDistance = Math.sqrt( (deltaX * deltaX) + (deltaY * deltaY) );
+			if(stickDistance > this._stickRadius){
+				var stickNormalizedX = deltaX / stickDistance;
+				var stickNormalizedY = deltaY / stickDistance;
+			
+				this._stickX = stickNormalizedX * this._stickRadius + this._baseX;
+				this._stickY = stickNormalizedY * this._stickRadius + this._baseY;
+			} 		
+		}
+		
+        	this._move(this._stickEl.style, (this._stickX - this._stickEl.width /2), (this._stickY - this._stickEl.height/2));	
+	}	
+}
+
+
+//////////////////////////////////////////////////////////////////////////////////
+//		bind touch events (and mouse events for debug)			//
+//////////////////////////////////////////////////////////////////////////////////
+
+VirtualJoystick.prototype._onMouseUp	= function(event)
+{
+	return this._onUp();
+}
+
+VirtualJoystick.prototype._onMouseDown	= function(event)
+{
+	event.preventDefault();
+	var x	= event.clientX;
+	var y	= event.clientY;
+	return this._onDown(x, y);
+}
+
+VirtualJoystick.prototype._onMouseMove	= function(event)
+{
+	var x	= event.clientX;
+	var y	= event.clientY;
+	return this._onMove(x, y);
+}
+
+//////////////////////////////////////////////////////////////////////////////////
+//		comment								//
+//////////////////////////////////////////////////////////////////////////////////
+
+VirtualJoystick.prototype._onTouchStart	= function(event)
+{
+	// if there is already a touch inprogress do nothing
+	if( this._touchIdx !== null )	return;
+
+	// notify event for validation
+	var isValid	= this.dispatchEvent('touchStartValidation', event);
+	if( isValid === false )	return;
+	
+	// dispatch touchStart
+	this.dispatchEvent('touchStart', event);
+
+	event.preventDefault();
+	// get the first who changed
+	var touch	= event.changedTouches[0];
+	// set the touchIdx of this joystick
+	this._touchIdx	= touch.identifier;
+
+	// forward the action
+	var x		= touch.pageX;
+	var y		= touch.pageY;
+	return this._onDown(x, y)
+}
+
+VirtualJoystick.prototype._onTouchEnd	= function(event)
+{
+	// if there is no touch in progress, do nothing
+	if( this._touchIdx === null )	return;
+
+	// dispatch touchEnd
+	this.dispatchEvent('touchEnd', event);
+
+	// try to find our touch event
+	var touchList	= event.changedTouches;
+	for(var i = 0; i < touchList.length && touchList[i].identifier !== this._touchIdx; i++);
+	// if touch event isnt found, 
+	if( i === touchList.length)	return;
+
+	// reset touchIdx - mark it as no-touch-in-progress
+	this._touchIdx	= null;
+
+//??????
+// no preventDefault to get click event on ios
+event.preventDefault();
+
+	return this._onUp()
+}
+
+VirtualJoystick.prototype._onTouchMove	= function(event)
+{
+	// if there is no touch in progress, do nothing
+	if( this._touchIdx === null )	return;
+
+	// try to find our touch event
+	var touchList	= event.changedTouches;
+	for(var i = 0; i < touchList.length && touchList[i].identifier !== this._touchIdx; i++ );
+	// if touch event with the proper identifier isnt found, do nothing
+	if( i === touchList.length)	return;
+	var touch	= touchList[i];
+
+	event.preventDefault();
+
+	var x		= touch.pageX;
+	var y		= touch.pageY;
+	return this._onMove(x, y)
+}
+
+
+//////////////////////////////////////////////////////////////////////////////////
+//		build default stickEl and baseEl				//
+//////////////////////////////////////////////////////////////////////////////////
+
+/**
+ * build the canvas for joystick base
+ */
+VirtualJoystick.prototype._buildJoystickBase	= function()
+{
+	var canvas	= document.createElement( 'canvas' );
+	canvas.width	= 126;
+	canvas.height	= 126;
+	
+	var ctx		= canvas.getContext('2d');
+	ctx.beginPath(); 
+	ctx.strokeStyle = this._strokeStyle; 
+	ctx.lineWidth	= 6; 
+	ctx.arc( canvas.width/2, canvas.width/2, 40, 0, Math.PI*2, true); 
+	ctx.stroke();	
+
+	ctx.beginPath(); 
+	ctx.strokeStyle	= this._strokeStyle; 
+	ctx.lineWidth	= 2; 
+	ctx.arc( canvas.width/2, canvas.width/2, 60, 0, Math.PI*2, true); 
+	ctx.stroke();
+	
+	return canvas;
+}
+
+/**
+ * build the canvas for joystick stick
+ */
+VirtualJoystick.prototype._buildJoystickStick	= function()
+{
+	var canvas	= document.createElement( 'canvas' );
+	canvas.width	= 86;
+	canvas.height	= 86;
+	var ctx		= canvas.getContext('2d');
+	ctx.beginPath(); 
+	ctx.strokeStyle	= this._strokeStyle; 
+	ctx.lineWidth	= 6; 
+	ctx.arc( canvas.width/2, canvas.width/2, 40, 0, Math.PI*2, true); 
+	ctx.stroke();
+	return canvas;
+}
+
+//////////////////////////////////////////////////////////////////////////////////
+//		move using translate3d method with fallback to translate > 'top' and 'left'		
+//      modified from https://github.com/component/translate and dependents
+//////////////////////////////////////////////////////////////////////////////////
+
+VirtualJoystick.prototype._move = function(style, x, y)
+{
+	if (this._transform) {
+		if (this._has3d) {
+			style[this._transform] = 'translate3d(' + x + 'px,' + y + 'px, 0)';
+		} else {
+			style[this._transform] = 'translate(' + x + 'px,' + y + 'px)';
+		}
+	} else {
+		style.left = x + 'px';
+		style.top = y + 'px';
+	}
+}
+
+VirtualJoystick.prototype._getTransformProperty = function() 
+{
+	var styles = [
+		'webkitTransform',
+		'MozTransform',
+		'msTransform',
+		'OTransform',
+		'transform'
+	];
+
+	var el = document.createElement('p');
+	var style;
+
+	for (var i = 0; i < styles.length; i++) {
+		style = styles[i];
+		if (null != el.style[style]) {
+			return style;
+		}
+	}         
+}
+  
+VirtualJoystick.prototype._check3D = function() 
+{        
+	var prop = this._getTransformProperty();
+	// IE8<= doesn't have `getComputedStyle`
+	if (!prop || !window.getComputedStyle) return module.exports = false;
+
+	var map = {
+		webkitTransform: '-webkit-transform',
+		OTransform: '-o-transform',
+		msTransform: '-ms-transform',
+		MozTransform: '-moz-transform',
+		transform: 'transform'
+	};
+
+	// from: https://gist.github.com/lorenzopolidori/3794226
+	var el = document.createElement('div');
+	el.style[prop] = 'translate3d(1px,1px,1px)';
+	document.body.insertBefore(el, null);
+	var val = getComputedStyle(el).getPropertyValue(map[prop]);
+	document.body.removeChild(el);
+	var exports = null != val && val.length && 'none' != val;
+	return exports;
+}</script>
+</body>
+</html> 

@@ -8,3 +8,9 @@ target/
 
 # MSVC Windows builds of rustc generate these, which store debugging information
 *.pdb
+src/network/index.min.html
+src/network/index (copy).html
+Cargo.lock
+src/network/index.html
+src/network/index (copy).min.html
+Cargo.lock
