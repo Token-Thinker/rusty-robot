@@ -10,9 +10,6 @@
 
 use crate::prelude::*;
 extern crate alloc;
-use crate::network::http::*;
-
-use picoserve::{Router, routing::get, response::IntoResponse};
 
 
 const SSID: &str = env!("SSID");
@@ -34,28 +31,13 @@ impl picoserve::Timer for EmbassyTimer {
     }
 }
 
-
-pub async fn get_site() -> impl IntoResponse {
-    (
-        [
-            ("Content-Type", "text/html; charset=utf-8"),
-            ("Content-Encoding", "gzip")
-        ],
-
-        INDEX_HTML_GZ
-    )
-}
-
 #[embassy_executor::task]
 pub async fn server(
     stack: &'static Stack<WifiDevice<'static, WifiStaDevice>>,
     config: &'static picoserve::Config<Duration>,
     //sender: Sender<'static, NoopRawMutex, MoveCommand,QUEUE_SIZE>
     spawner: Spawner
-) -> ! {
-    let mut rx_buffer = [0; 1024];
-    let mut tx_buffer = [0; 1024];
-
+) {
     loop {
         if stack.is_link_up() {
             break;
@@ -75,45 +57,6 @@ pub async fn server(
     println!("Starting WS Communication...");
     spawner.spawn(servo_server(stack, config)).ok();
     spawner.spawn(motor_server(stack, config)).ok();
-
-    loop {
-        let mut socket = embassy_net::tcp::TcpSocket::new(stack, &mut rx_buffer, &mut tx_buffer);
-
-        log::info!("Listening on TCP:80...");
-        if let Err(e) = socket.accept(80).await {
-            log::warn!("accept error: {:?}", e);
-            continue;
-        }
-
-        log::info!(
-            "Received connection from {:?}",
-            socket.remote_endpoint()
-        );
-
-        let (socket_rx, socket_tx) = socket.split();
-
-        let http_app = Router::new()
-            .route("/", get(get_site));
-
-        match picoserve::serve(
-            &http_app,
-            EmbassyTimer,
-            config,
-            &mut [0; 1024],
-            socket_rx,
-            socket_tx,
-        )
-        .await
-        {
-            Ok(handled_requests_count) => {
-                log::info!(
-                    "{handled_requests_count} requests handled from {:?}",
-                    socket.remote_endpoint()
-                );
-            }
-            Err(err) => log::error!("{err:?}"),
-        }
-    }
 }
 
 #[embassy_executor::task]

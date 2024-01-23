@@ -1,7 +1,6 @@
 #![no_std]
 #![no_main]
 #![feature(type_alias_impl_trait)]
-#![feature(async_fn_in_trait)]
 
 pub mod hardware;
 pub mod network;
@@ -65,11 +64,12 @@ async fn main(_spawner: Spawner) {
         seed
     ));
 
-    let pico_config = make_static!(picoserve::Config {
-        start_read_request_timeout: Some(Duration::from_secs(5)),
-        read_request_timeout: Some(Duration::from_secs(1)),
-        write_timeout: Some(Duration::from_secs(5)),
-    });
+    let pico_config = make_static!(picoserve::Config::new(picoserve::Timeouts {
+        start_read_request: Some(Duration::from_secs(5)),
+        read_request: Some(Duration::from_secs(1)),
+        write: Some(Duration::from_secs(5)),
+    })
+    .keep_connection_alive());
 
     //Flywheel Motor Configurations
     let led = io.pins.gpio4.into_push_pull_output();

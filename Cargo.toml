@@ -10,8 +10,6 @@ license = "MIT OR Apache-2.0"
 opt-level = 3
 
 
-
-
 ##########################################################
 #               Core Project Dependencies                #
 ##########################################################
@@ -23,10 +21,10 @@ embedded-svc = { version = "*", default-features = false, features = [] }
 embedded-io = "*"
 embedded-io-async = "*"
 
-embassy-time = {version = "*", features = ["nightly"]}
+embassy-time = { version = "*", features = ["nightly"] }
 embassy-macros = "*"
 embassy-futures = "*"
-embassy-executor = {version = "^0.3.3", features = ["nightly"]}
+embassy-executor = { version = "^0.3.3", features = ["nightly"] }
 embassy-sync = "*"
 embassy-net = "*"
 
@@ -75,7 +73,7 @@ hal = { package = "esp32-hal", version = "*", features = [
     "embassy-executor-thread",
     "embassy-executor-interrupt",
 ] }
-esp-wifi = {version = "*", features = [
+esp-wifi = { version = "*", features = [
     "wifi",
     "async",
     "esp32",

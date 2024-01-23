@@ -14,3 +14,5 @@ Cargo.lock
 src/network/index.html
 src/network/index (copy).min.html
 Cargo.lock
+
+venv

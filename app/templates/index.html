@@ -1,0 +1,269 @@
+<!DOCTYPE HTML><html><head><title>TkR DASHBOARD</title><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css" integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous"><style>html{font-family:Arial,Helvetica,sans-serif;text-align:center}body{margin:0}h1{font-size:1.8rem;color:#fff}.topnav{position:sticky;top:0;overflow:hidden;background-color:#0a1128;padding:20px;color:#f2f2f2}.grid{max-width:600px;margin:0 auto;display:grid;grid-template-columns:2fr 1fr;gap:20px;padding:50px}.camera-output{border:1px solid #ccc;box-shadow:2px 2px 12px 1px rgba(140,140,140,.5)}.camera-output>img{display:block;width:auto;height:49vh;border-radius:4px;margin-top:8px}.controls{background-color:#fff;padding:20px 20px 20px;box-shadow:2px 2px 12px 1px rgba(140,140,140,.5)}.controls>h3{font-size:1.2rem;font-weight:700;color:#034078}.controls>button{background:#ccc;border:0;color:#fff;padding:10px;margin-top:10px;width:100%}#joystickContainer{width:100%;height:200px;margin-top:20px;background-color:#333;display:flex;align-items:center;justify-content:center;overflow:hidden;border-radius:7px;touch-action:none;position:relative}#joystickHandle{position:absolute;top:50%;left:50%;width:50px;height:50px;background-color:#fff;border:1px solid #000;border-radius:50%;transform:translate(-50%,-50%)}.toggle{width:70px;height:30px;position:relative;margin-bottom:10px}.toggle input{display:none}.toggle label{background-color:#ccc;position:absolute;top:0;bottom:0;left:0;right:0;border-radius:5px;cursor:pointer;transition:.4s;line-height:30px;text-align:center;color:#fff;font-size:.9rem}.toggle label::before{content:"Off";position:absolute;width:100%;height:30px;left:0;bottom:0;background-color:#fff;border-radius:5px;transition:.4s;line-height:30px;text-align:center;color:#000;font-size:.9rem}.toggle input:checked+label{background-color:#4caf50}.toggle input:checked+label::before{transform:translateX(60px);content:"On";border:1px solid #000}.toggle input:checked+label[for=togglePrimeStandby]{background-color:#2196f3}.toggle input:checked+label[for=togglePrimeStandby]::before{transform:translateX(60px);content:"Prime"}.toggle label[for=togglePrimeStandby]::before{content:"Standby"}#launchBall{border-radius:50px;background-color:grey;color:#fff;padding:10px 24px;text-align:center;text-decoration:none;display:inline-block;font-size:16px;margin:4px 2px;transition-duration:.4s;cursor:pointer}#launchBall:hover{background-color:#555;color:#fff}#launchBall:disabled{cursor:not-allowed;background-color:grey}#launchBall:enabled{background-color:red}#launchBall:enabled:hover{background-color:#b30000}</style></head><body><div class="topnav"><h1>TkR CONSOLE - Face Detection and Output Control with WebSockets</h1></div><main class="grid"><div class="camera-output"><img id="cameraFeed" src="" alt="Camera Feed"></div><div class="controls"><h3>Control Options</h3><div class="toggle"><input type="checkbox" id="toggleOnOff"> <label for="toggleOnOff"></label></div><div class="toggle"><input type="checkbox" id="togglePrimeStandby"> <label for="togglePrimeStandby"></label></div><button id="launchBall" disabled>Launch Ball</button><div id="joystickContainer"></div><div id="result"></div></div></main><script>var servo_gateway = `ws://10.0.0.216:81/ws`;
+var motor_gateway = `ws://10.0.0.216:82/ws`;
+var servoWebsocket;
+var dcMotorWebsocket;
+
+window.addEventListener('load', onLoad);
+
+function onLoad(event) {
+    initWebSocket();
+    initControls();
+}
+
+// WebSocket functions
+function initWebSocket() {
+    console.log('Trying to open a WebSocket connection...');
+    servoWebsocket = new WebSocket(servo_gateway);
+    servoWebsocket.onopen    = onOpenServo;
+    servoWebsocket.onclose   = onCloseServo;
+    servoWebsocket.onerror   = onErrorServo;
+    servoWebsocket.onmessage = onMessageServo;
+
+    dcMotorWebsocket = new WebSocket(motor_gateway);
+    dcMotorWebsocket.onopen    = onOpenDCMotor;
+    dcMotorWebsocket.onclose   = onCloseDCMotor;
+    dcMotorWebsocket.onerror   = onErrorDCMotor;
+    dcMotorWebsocket.onmessage = onMessageDCMotor;
+}
+
+function onOpenServo(event) {
+    console.log('Servo connection opened');
+    servoWebsocket.send("auth:servo");
+}
+
+function onErrorServo(event) {
+    console.error('Servo WebSocket error observed:', event);
+}
+
+function onCloseServo(event) {
+    console.log('Servo connection closed');
+    setTimeout(() => { servoWebsocket = new WebSocket(servo_gateway); }, 2000);
+}
+
+function onMessageServo(event) {
+    console.log('Received servo message: ', event.data);
+}
+
+function onOpenDCMotor(event) {
+    console.log('DC Motor connection opened');
+    dcMotorWebsocket.send("auth:dc");
+}
+
+function onErrorDCMotor(event) {
+    console.error('DC Motor WebSocket error observed:', event);
+}
+
+function onCloseDCMotor(event) {
+    console.log('DC Motor connection closed');
+    setTimeout(() => { dcMotorWebsocket = new WebSocket(motor_gateway); }, 2000);
+}
+
+function onMessageDCMotor(event) {
+    console.log('Received DC motor message: ', event.data);
+}
+
+// Control initialization
+function initControls() {
+    console.log('Initializing Toggle On/Off...');
+    var joystickHandler = new JoystickHandler();
+    //var cameraHandler = new CameraHandler();
+    //initToggleOnOff(joystickHandler, cameraHandler);
+    initToggleOnOff(joystickHandler);
+    initPrimeStandbySwitch();
+    initLaunchBallButton();
+}
+
+function initToggleOnOff(joystickHandler) {
+    document.getElementById("toggleOnOff").addEventListener("click", function() {
+        var joystickEnabled = this.checked;
+        var primeStandbySwitch = document.getElementById("togglePrimeStandby");
+        primeStandbySwitch.disabled = !joystickEnabled;
+    
+        if (!joystickEnabled) {
+            joystickHandler.toggleJoystick(false);
+            //cameraHandler.stopCameraStream();
+            if (servoWebsocket && servoWebsocket.readyState === WebSocket.OPEN) {
+                //websocket.send("sys:off");
+            } else {
+                console.log('Failed to send message: WebSocket is closed');
+            }
+            primeStandbySwitch.checked = false; // set Prime/Standby switch to Standby when turned off
+            document.getElementById("launchBall").disabled = true; // disable launch ball button when turned off
+            console.log('Toggle Off');
+        } else {
+            joystickHandler.toggleJoystick(true);
+            //cameraHandler.startCameraStream();
+            if (servoWebsocket && servoWebsocket.readyState === WebSocket.OPEN) {
+                //websocket.send("sys:on");
+            } else {
+                console.log('Failed to send message: WebSocket is closed');
+            }
+            console.log('Toggle On');
+        }
+    });
+}
+
+function initPrimeStandbySwitch() {
+    var primeStandbySwitch = document.getElementById("togglePrimeStandby");
+    primeStandbySwitch.addEventListener('change', function() {
+        var launchBallButton = document.getElementById("launchBall");
+        launchBallButton.disabled = !this.checked;
+        if (this.checked) {
+            if (dcMotorWebsocket && dcMotorWebsocket.readyState === WebSocket.OPEN) {
+                dcMotorWebsocket.send("dc:on"); // Turn the motor on when the switch is set to Prime
+            } else {
+                console.log('Failed to send message: WebSocket is closed');
+            }
+            console.log('Toggle Prime');
+        } else {
+            if (dcMotorWebsocket && dcMotorWebsocket.readyState === WebSocket.OPEN) {
+                dcMotorWebsocket.send("dc:off"); // Turn the motor off when the switch is set to Standby
+            } else {
+                console.log('Failed to send message: WebSocket is closed');
+            }
+            console.log('Toggle Standby');
+        }
+    });    
+}
+
+
+function initLaunchBallButton() {
+    document.getElementById("launchBall").addEventListener("click", function() {
+        console.log("Launch Ball clicked");
+        if (dcMotorWebsocket && dcMotorWebsocket.readyState === WebSocket.OPEN) {
+            dcMotorWebsocket.send("dc:launch");
+        } else {
+            console.log('Failed to send message: WebSocket is closed');
+        }
+    });
+    var launchBallButton = document.getElementById("launchBall");
+    launchBallButton.disabled = true;
+}
+
+// Joystick handling
+class JoystickHandler {
+    constructor() {
+        this.joystick = null;
+        this.interval = null; // Add this line
+        this.joystickContainer = document.getElementById('joystickContainer');
+        this.joystickContainer.style.pointerEvents = "none";
+    }
+    
+    toggleJoystick(isEnabled) {
+        var outputEl  = document.getElementById('result');
+        if (!isEnabled) {
+            this.joystickContainer.style.pointerEvents = "none";
+            if (this.joystick) {
+                var joystickHandle = document.getElementById('joystickHandle');
+                this.joystickContainer.removeChild(joystickHandle);
+                this.joystick.destroy();
+                this.joystick = null;
+            }
+            if (this.interval) { // Clear interval when joystick is disabled
+                clearInterval(this.interval);
+                this.interval = null;
+            }
+            outputEl.textContent = ''; // Clear the output when joystick is disabled
+        } else {
+            this.joystickContainer.style.pointerEvents = "auto";
+            var joystickHandle = document.createElement('div');
+            joystickHandle.id = 'joystickHandle';
+            this.joystickContainer.appendChild(joystickHandle);
+            this.joystick = this.createJoystick(joystickHandle);
+            this.updateJoystick(joystickHandle, this.joystick);
+        }
+    }    
+    
+    createJoystick(handle) {
+        var joystick = new VirtualJoystick({
+            container: this.joystickContainer,
+            mouseSupport: true,
+        });
+        
+        handle.style.backgroundColor = '#FFFFFF';
+        
+        joystick.addEventListener('touchStartValidation', function(event){
+            return true;
+        });
+    
+        joystick.addEventListener('touchStart', function(){
+            handle.style.backgroundColor = '#FF0000';
+        });
+    
+        joystick.addEventListener('touchEnd', function(){
+            handle.style.backgroundColor = '#FFFFFF';
+        });
+    
+        this.updateJoystick(handle, joystick);
+        return joystick;
+    }
+    
+    updateJoystick(handle, joystick) {
+        let lastDx = null, lastDy = null;  // Keep track of the last known position
+    
+        if (this.interval) {
+            clearInterval(this.interval);
+        }
+    
+        this.interval = setInterval(function() {
+            var dx = joystick.deltaX();
+            var dy = joystick.deltaY();
+            
+            // Only proceed if the joystick's position has changed
+            if (dx !== lastDx || dy !== lastDy) {
+                handle.style.transform = `translate(${dx - 50}%, ${dy - 50}%)`;
+            
+                var outputEl  = document.getElementById('result');
+                outputEl.textContent = 'dx:' + dx + ' dy:' + dy;
+                
+                // send the joystick position as a string in the form "dx:dy" to the WebSocket
+                if (servoWebsocket && servoWebsocket.readyState === WebSocket.OPEN) {
+                    servoWebsocket.send(`servo:${dx}:${dy}`);
+                } else {
+                    console.log('Failed to send message: WebSocket is closed');
+                }
+    
+                console.log(`dx:${dx},dy:${dy}`);
+                
+                // Update the last known position
+                lastDx = dx;
+                lastDy = dy;
+            }
+        }, );
+    }              
+}
+
+
+/*
+class CameraHandler {
+    constructor() {
+        this.cameraOutput = document.getElementById('cameraFeed');
+        try {
+            this.ws = new WebSocket("ws://" + window.location.host + ":82"); // WebSocket for the camera feed
+        } catch (error) {
+            console.error('Failed to construct WebSocket for CameraHandler:', error);
+            this.ws = null; // Set to null so we know it failed
+        }
+    }
+
+    startCameraStream() {
+        if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+            this.ws.send(JSON.stringify({
+                type: "command",
+                command: "streamon"
+            }));
+            this.cameraOutput.src = "http://" + window.location.host + ":81/stream";
+        }
+    }
+
+    stopCameraStream() {
+        if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+            this.ws.send(JSON.stringify({
+                type: "command",
+                command: "streamoff"
+            }));
+        }
+        this.cameraOutput.src = "";
+    }
+}
+*/</script><script>var VirtualJoystick=function(t){t=t||{},this._container=t.container||document.body,this._strokeStyle=t.strokeStyle||"cyan",this._stickEl=t.stickElement||this._buildJoystickStick(),this._baseEl=t.baseElement||this._buildJoystickBase(),this._mouseSupport=void 0!==t.mouseSupport&&t.mouseSupport,this._stationaryBase=t.stationaryBase||!1,this._baseX=this._stickX=t.baseX||0,this._baseY=this._stickY=t.baseY||0,this._limitStickTravel=t.limitStickTravel||!1,this._stickRadius=void 0!==t.stickRadius?t.stickRadius:100,this._useCssTransform=void 0!==t.useCssTransform&&t.useCssTransform,this._container.style.position="relative",this._container.appendChild(this._baseEl),this._baseEl.style.position="absolute",this._baseEl.style.display="none",this._container.appendChild(this._stickEl),this._stickEl.style.position="absolute",this._stickEl.style.display="none",this._pressed=!1,this._touchIdx=null,!0===this._stationaryBase&&(this._baseEl.style.display="",this._baseEl.style.left=this._baseX-this._baseEl.width/2+"px",this._baseEl.style.top=this._baseY-this._baseEl.height/2+"px"),this._transform=!!this._useCssTransform&&this._getTransformProperty(),this._has3d=this._check3D();var s=function(t,s){return function(){return t.apply(s,arguments)}};this._$onTouchStart=s(this._onTouchStart,this),this._$onTouchEnd=s(this._onTouchEnd,this),this._$onTouchMove=s(this._onTouchMove,this),this._container.addEventListener("touchstart",this._$onTouchStart,!1),this._container.addEventListener("touchend",this._$onTouchEnd,!1),this._container.addEventListener("touchmove",this._$onTouchMove,!1),this._mouseSupport&&(this._$onMouseDown=s(this._onMouseDown,this),this._$onMouseUp=s(this._onMouseUp,this),this._$onMouseMove=s(this._onMouseMove,this),this._container.addEventListener("mousedown",this._$onMouseDown,!1),this._container.addEventListener("mouseup",this._$onMouseUp,!1),this._container.addEventListener("mousemove",this._$onMouseMove,!1))};VirtualJoystick.prototype.destroy=function(){this._container.removeChild(this._baseEl),this._container.removeChild(this._stickEl),this._container.removeEventListener("touchstart",this._$onTouchStart,!1),this._container.removeEventListener("touchend",this._$onTouchEnd,!1),this._container.removeEventListener("touchmove",this._$onTouchMove,!1),this._mouseSupport&&(this._container.removeEventListener("mouseup",this._$onMouseUp,!1),this._container.removeEventListener("mousedown",this._$onMouseDown,!1),this._container.removeEventListener("mousemove",this._$onMouseMove,!1))},VirtualJoystick.touchScreenAvailable=function(){return"createTouch"in document},function(t){t.addEventListener=function(t,s){return void 0===this._events&&(this._events={}),this._events[t]=this._events[t]||[],this._events[t].push(s),s},t.removeEventListener=function(t,s){void 0===this._events&&(this._events={}),t in this._events!=!1&&this._events[t].splice(this._events[t].indexOf(s),1)},t.dispatchEvent=function(t){if(void 0===this._events&&(this._events={}),void 0!==this._events[t])for(var s=this._events[t].slice(),i=0;i<s.length;i++){var e=s[i].apply(this,Array.prototype.slice.call(arguments,1));if(void 0!==e)return e}}}(VirtualJoystick.prototype),VirtualJoystick.prototype.deltaX=function(){return this._stickX-this._baseX},VirtualJoystick.prototype.deltaY=function(){return this._stickY-this._baseY},VirtualJoystick.prototype.up=function(){if(!1===this._pressed)return!1;var t=this.deltaX(),s=this.deltaY();return!(0<=s)&&!(Math.abs(t)>2*Math.abs(s))},VirtualJoystick.prototype.down=function(){if(!1===this._pressed)return!1;var t=this.deltaX(),s=this.deltaY();return!(s<=0)&&!(Math.abs(t)>2*Math.abs(s))},VirtualJoystick.prototype.right=function(){if(!1===this._pressed)return!1;var t=this.deltaX(),s=this.deltaY();return!(t<=0)&&!(Math.abs(s)>2*Math.abs(t))},VirtualJoystick.prototype.left=function(){if(!1===this._pressed)return!1;var t=this.deltaX(),s=this.deltaY();return!(0<=t)&&!(Math.abs(s)>2*Math.abs(t))},VirtualJoystick.prototype._onUp=function(){this._pressed=!1,this._stickEl.style.display="none",0==this._stationaryBase&&(this._baseEl.style.display="none",this._baseX=this._baseY=0,this._stickX=this._stickY=0)},VirtualJoystick.prototype._onDown=function(t,s){if(this._pressed=!0,0==this._stationaryBase&&(this._baseX=t,this._baseY=s,this._baseEl.style.display="",this._move(this._baseEl.style,this._baseX-this._baseEl.width/2,this._baseY-this._baseEl.height/2)),this._stickX=t,this._stickY=s,!0===this._limitStickTravel){var i=this.deltaX(),e=this.deltaY(),o=Math.sqrt(i*i+e*e);if(o>this._stickRadius){var n=i/o,r=e/o;this._stickX=n*this._stickRadius+this._baseX,this._stickY=r*this._stickRadius+this._baseY}}this._stickEl.style.display="",this._move(this._stickEl.style,this._stickX-this._stickEl.width/2,this._stickY-this._stickEl.height/2)},VirtualJoystick.prototype._onMove=function(t,s){if(!0===this._pressed){if(this._stickX=t,this._stickY=s,!0===this._limitStickTravel){var i=this.deltaX(),e=this.deltaY(),o=Math.sqrt(i*i+e*e);if(o>this._stickRadius){var n=i/o,r=e/o;this._stickX=n*this._stickRadius+this._baseX,this._stickY=r*this._stickRadius+this._baseY}}this._move(this._stickEl.style,this._stickX-this._stickEl.width/2,this._stickY-this._stickEl.height/2)}},VirtualJoystick.prototype._onMouseUp=function(t){return this._onUp()},VirtualJoystick.prototype._onMouseDown=function(t){t.preventDefault();var s=t.clientX,i=t.clientY;return this._onDown(s,i)},VirtualJoystick.prototype._onMouseMove=function(t){var s=t.clientX,i=t.clientY;return this._onMove(s,i)},VirtualJoystick.prototype._onTouchStart=function(t){if(null===this._touchIdx){var s=this.dispatchEvent("touchStartValidation",t);if(!1!==s){this.dispatchEvent("touchStart",t),t.preventDefault();var i=t.changedTouches[0];this._touchIdx=i.identifier;var e=i.pageX,o=i.pageY;return this._onDown(e,o)}}},VirtualJoystick.prototype._onTouchEnd=function(t){if(null!==this._touchIdx){this.dispatchEvent("touchEnd",t);for(var s=t.changedTouches,i=0;i<s.length&&s[i].identifier!==this._touchIdx;i++);if(i!==s.length)return this._touchIdx=null,t.preventDefault(),this._onUp()}},VirtualJoystick.prototype._onTouchMove=function(t){if(null!==this._touchIdx){for(var s=t.changedTouches,i=0;i<s.length&&s[i].identifier!==this._touchIdx;i++);if(i!==s.length){var e=s[i];t.preventDefault();var o=e.pageX,n=e.pageY;return this._onMove(o,n)}}},VirtualJoystick.prototype._buildJoystickBase=function(){var t=document.createElement("canvas");t.width=126,t.height=126;var s=t.getContext("2d");return s.beginPath(),s.strokeStyle=this._strokeStyle,s.lineWidth=6,s.arc(t.width/2,t.width/2,40,0,2*Math.PI,!0),s.stroke(),s.beginPath(),s.strokeStyle=this._strokeStyle,s.lineWidth=2,s.arc(t.width/2,t.width/2,60,0,2*Math.PI,!0),s.stroke(),t},VirtualJoystick.prototype._buildJoystickStick=function(){var t=document.createElement("canvas");t.width=86,t.height=86;var s=t.getContext("2d");return s.beginPath(),s.strokeStyle=this._strokeStyle,s.lineWidth=6,s.arc(t.width/2,t.width/2,40,0,2*Math.PI,!0),s.stroke(),t},VirtualJoystick.prototype._move=function(t,s,i){this._transform?this._has3d?t[this._transform]="translate3d("+s+"px,"+i+"px, 0)":t[this._transform]="translate("+s+"px,"+i+"px)":(t.left=s+"px",t.top=i+"px")},VirtualJoystick.prototype._getTransformProperty=function(){for(var t,s=["webkitTransform","MozTransform","msTransform","OTransform","transform"],i=document.createElement("p"),e=0;e<s.length;e++)if(t=s[e],null!=i.style[t])return t},VirtualJoystick.prototype._check3D=function(){var t=this._getTransformProperty();if(!t||!window.getComputedStyle)return module.exports=!1;var s={webkitTransform:"-webkit-transform",OTransform:"-o-transform",msTransform:"-ms-transform",MozTransform:"-moz-transform",transform:"transform"},i=document.createElement("div");i.style[t]="translate3d(1px,1px,1px)",document.body.insertBefore(i,null);var e=getComputedStyle(i).getPropertyValue(s[t]);document.body.removeChild(i);var o=null!=e&&e.length&&"none"!=e;return o}</script></body></html>
