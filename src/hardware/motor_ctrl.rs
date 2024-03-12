@@ -1,10 +1,33 @@
 //! ## Motor Control Module
 //!
-//! Provides basic control functions for a single motor. 
+//! Provides basic control functions for a single motor, including the ability to turn it 
+//! on/off and configure custom launch sequences.
 //!
 //! **Key Functions**
 //!
-//! * `control_motor`:  Async task that receives motor commands (On, Off, Launch) and controls the appropriate GPIO pin.
+//! * `on()`: Turns the motor on.
+//! * `off()`: Turns the motor off.
+//! * `launch()`: Executes a customizable launch sequence (e.g., rapid toggling for initialization).
+//! * `process_command()`: Handles commands received via the `MOTOR_CTRL_SIGNAL`.
+//!
+//! **Error Handling**
+//! * **PinError:** Indicates a generic error occurred when interacting with the GPIO pin. 
+//!   Consider adding more specific error types for finer-grained error handling if needed.
+//!
+//! **Usage**
+//! ```rust
+//! async fn motor_control_task<PIN: OutputPin>(mut motor: MotorImpl<PIN>) {
+//!     loop {
+//!         match motor.process_command().await {
+//!             Ok(()) => (), 
+//!             Err(err) => { 
+//!                 error!("Error during motor control: {:?}", err);
+//!                 }
+//!             }
+//!         Timer::after(Duration::from_millis(10)).await; // Adjust polling interval as needed
+//!     }
+//! }
+//! ```
 
 use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, signal::Signal};
 use embedded_hal::digital::OutputPin;
@@ -76,7 +99,7 @@ mod rp2040_hal_mapping {
 }
 
 // Concrete Motor Implementations using a specific HAL & Embassy
-struct MotorImpl<PIN: OutputPin> {
+pub struct MotorImpl<PIN: OutputPin> {
     pin: PIN,
 }
 
@@ -111,3 +134,4 @@ impl<PIN: OutputPin> Motor for MotorImpl<PIN> {
         Ok(())
     }
 }
+
