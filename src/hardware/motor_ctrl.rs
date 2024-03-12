@@ -29,8 +29,10 @@
 //! }
 //! ```
 
+use core::fmt;
+
 use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, signal::Signal};
-use embedded_hal::digital::OutputPin;
+use embedded_hal::digital::{OutputPin, ErrorKind as PinError};
 use embassy_time::{Timer, Duration};
 
 pub static MOTOR_CTRL_SIGNAL: Signal<CriticalSectionRawMutex, MotorCommand> = Signal::new();
@@ -44,15 +46,17 @@ pub enum MotorCommand {
 }
 
 // Custom Error Type
-#[derive(Debug)]
-enum Error {
-    PinError,
+#[derive(fmt::Debug)]
+#[allow(missing_docs)]
+pub enum Error<> {
+    PinError(PinError),
 }
+
 
 // Motor Trait - Represents the core functions  
 trait Motor {
-    async fn on(&mut self) -> Result<(), Error>;
-    async fn off(&mut self) -> Result<(), Error>;
+    fn on(&mut self) -> Result<(), Error>;
+    fn off(&mut self) -> Result<(), Error>;
     async fn launch(&mut self) -> Result<(), Error>;
     async fn process_command(&mut self) -> Result<(), Error>;
 }
@@ -61,18 +65,20 @@ trait Motor {
 #[cfg(all(target_os = "none", target_arch = "xtensa", target_vendor = "unknown"))]
 mod esp_hal_mapping {
     use super::OutputPin;
-    use hal::gpio::{GpioPin as EspOutputPin,  PushPull, Output};
+    use hal::gpio::{GpioPin,  PushPull, Output};
+
+    struct EspOutputPin<const GPIONUM: u8>(GpioPin<Output<PushPull>, GPIONUM>);
+
     // Implement the embedded-hal OutputPin trait for ESP-IDF's OutputPin type
-    impl<const GPIONUM: u8> OutputPin for EspOutputPin<Output<PushPull>, GPIONUM>
-      {
-        
+    impl<const GPIONUM: u8> OutputPin for EspOutputPin<GPIONUM>{
+
         fn set_low(&mut self) -> Result<(), Self::Error> {
-            self.set_low().unwrap();
-            Ok(()) 
+            self.0.set_low().unwrap();
+            Ok(())
         }
 
         fn set_high(&mut self) -> Result<(), Self::Error> {
-            self.set_low().unwrap();
+            self.set_high().unwrap();
             Ok(())
         }
         
@@ -115,9 +121,9 @@ impl<PIN: OutputPin> Motor for MotorImpl<PIN> {
     
     async fn launch(&mut self) -> Result<(), Error> {
         for _ in 0..100 {
-            self.pin.toggle().map_err(|_| Error::PinError)?;
+            self.pin.set_high().map_err(|_| Error::PinError);
             Timer::after(Duration::from_millis(1)).await;
-            self.pin.toggle().map_err(|_| Error::PinError)?;
+            self.pin.set_low().map_err(|_| Error::PinError);
             Timer::after(Duration::from_millis(1)).await;
         }
     
@@ -125,12 +131,13 @@ impl<PIN: OutputPin> Motor for MotorImpl<PIN> {
     }
 
     async fn process_command(&mut self) -> Result<(), Error> {
-        if let Some(command) = MOTOR_CTRL_SIGNAL.try_recv() {
+        let command = MOTOR_CTRL_SIGNAL.wait().await;
+        {
            match command {
                 MotorCommand::On => self.on(),
                 MotorCommand::Off => self.off(),
-                MotorCommand::Launch => self.launch().await,  
-           }
+                MotorCommand::Launch => Ok(self.launch().await?),  
+           };
         }
         Ok(())
     }
