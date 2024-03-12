@@ -46,7 +46,7 @@ pub enum MotorCommand {
 // Custom Error Type
 #[derive(Debug)]
 enum Error {
-    PinError, // Or add more specific error variants as needed
+    PinError,
 }
 
 // Motor Trait - Represents the core functions  
@@ -57,6 +57,7 @@ trait Motor {
     async fn process_command(&mut self) -> Result<(), Error>;
 }
 
+// HAL Mapping for ESP32 Xtensa
 #[cfg(all(target_os = "none", target_arch = "xtensa", target_vendor = "unknown"))]
 mod esp_hal_mapping {
     use super::OutputPin;
@@ -85,14 +86,14 @@ mod esp_hal_mapping {
 }
 
 // HAL Mapping for RP2040
-#[cfg(target_arch = "arm")] // Assuming rp2040-hal uses this
+#[cfg(target_arch = "arm")]
 mod rp2040_hal_mapping {
     use super::OutputPin;
-    use rp2040_hal::gpio::Pin as Rp2040Pin; // Import from rp2040-hal
+    use rp2040_hal::gpio::Pin as Rp2040Pin;
     use rp2040_hal::gpio::functions::GpioFunction;
 
-    impl OutputPin for Rp2040Pin<GpioFunction::PIO0> { // Example function
-        type Error = rp2040_hal::gpio::Error; // Or appropriate error type
+    impl OutputPin for Rp2040Pin<GpioFunction::PIO0> {
+        type Error = rp2040_hal::gpio::Error; 
 
         //todo!()
     }
