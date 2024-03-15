@@ -16,12 +16,15 @@
 //!
 //! **Usage**
 //! ```rust
-//! async fn motor_control_task<PIN: OutputPin>(mut motor: MotorImpl<PIN>) {
+//! 
+//! use hardware::motor_ctrl::*
+//! 
+//! async fn motor_control_task<PIN: Motor>(mut pin: PIN) {
 //!     loop {
-//!         match motor.process_command().await {
+//!         match pin.process_command().await {
 //!             Ok(()) => (), 
 //!             Err(err) => { 
-//!                 error!("Error during motor control: {:?}", err);
+//!                 todo!()
 //!                 }
 //!             }
 //!         Timer::after(Duration::from_millis(10)).await; // Adjust polling interval as needed
@@ -32,13 +35,13 @@
 use core::fmt;
 
 use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, signal::Signal};
-use embedded_hal::digital::{OutputPin, ErrorKind as PinError};
+use embedded_hal_1::digital::OutputPin;
 use embassy_time::{Timer, Duration};
 
 pub static MOTOR_CTRL_SIGNAL: Signal<CriticalSectionRawMutex, MotorCommand> = Signal::new();
 
 // Motor Command
-#[derive(Debug)]
+#[derive(fmt::Debug)]
 pub enum MotorCommand {
     On,
     Off,
@@ -49,81 +52,32 @@ pub enum MotorCommand {
 #[derive(fmt::Debug)]
 #[allow(missing_docs)]
 pub enum Error<> {
-    PinError(PinError),
+    PinError,
 }
 
-
-// Motor Trait - Represents the core functions  
-trait Motor {
+// Motor Trait
+pub trait Motor {
     fn on(&mut self) -> Result<(), Error>;
     fn off(&mut self) -> Result<(), Error>;
     async fn launch(&mut self) -> Result<(), Error>;
     async fn process_command(&mut self) -> Result<(), Error>;
 }
-
-// HAL Mapping for ESP32 Xtensa
-#[cfg(all(target_os = "none", target_arch = "xtensa", target_vendor = "unknown"))]
-mod esp_hal_mapping {
-    use super::OutputPin;
-    use hal::gpio::{GpioPin,  PushPull, Output};
-
-    struct EspOutputPin<const GPIONUM: u8>(GpioPin<Output<PushPull>, GPIONUM>);
-
-    // Implement the embedded-hal OutputPin trait for ESP-IDF's OutputPin type
-    impl<const GPIONUM: u8> OutputPin for EspOutputPin<GPIONUM>{
-
-        fn set_low(&mut self) -> Result<(), Self::Error> {
-            self.0.set_low().unwrap();
-            Ok(())
-        }
-
-        fn set_high(&mut self) -> Result<(), Self::Error> {
-            self.set_high().unwrap();
-            Ok(())
-        }
-        
-        fn set_state(&mut self, state: embedded_hal::digital::PinState) -> Result<(), Self::Error> {
-            match state {
-                embedded_hal::digital::PinState::Low => self.set_low(),
-                embedded_hal::digital::PinState::High => self.set_high(),
-            }
-        }
-    }
-}
-
-// HAL Mapping for RP2040
-#[cfg(target_arch = "arm")]
-mod rp2040_hal_mapping {
-    use super::OutputPin;
-    use rp2040_hal::gpio::Pin as Rp2040Pin;
-    use rp2040_hal::gpio::functions::GpioFunction;
-
-    impl OutputPin for Rp2040Pin<GpioFunction::PIO0> {
-        type Error = rp2040_hal::gpio::Error; 
-
-        //todo!()
-    }
-}
-
 // Concrete Motor Implementations using a specific HAL & Embassy
-pub struct MotorImpl<PIN: OutputPin> {
-    pin: PIN,
-}
 
-impl<PIN: OutputPin> Motor for MotorImpl<PIN> {
+impl<T: OutputPin> Motor for T {
     fn on(&mut self) -> Result<(), Error> {
-        self.pin.set_high().map_err(|_| Error::PinError)
+        self.set_high().map_err(|_| Error::PinError)
     }
     
     fn off(&mut self) -> Result<(), Error> {
-        self.pin.set_low().map_err(|_| Error::PinError)
+        self.set_low().map_err(|_| Error::PinError)
     }
     
     async fn launch(&mut self) -> Result<(), Error> {
         for _ in 0..100 {
-            self.pin.set_high().map_err(|_| Error::PinError);
+            self.set_high().map_err(|_| Error::PinError);
             Timer::after(Duration::from_millis(1)).await;
-            self.pin.set_low().map_err(|_| Error::PinError);
+            self.set_low().map_err(|_| Error::PinError);
             Timer::after(Duration::from_millis(1)).await;
         }
     
