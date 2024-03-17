@@ -53,7 +53,7 @@ trait ServoControl {
 }
 
 // Implementation for a specific servo using PWM
-pub struct Servo<P: PwmPin> {
+struct Servo<P: PwmPin> {
     pwm_pin: P,
     min_pulse: P::Duty,
     max_pulse: P::Duty,
@@ -61,7 +61,7 @@ pub struct Servo<P: PwmPin> {
 
 impl<P: PwmPin<Duty = u16>> ServoControl for Servo<P>{
 
-        fn set_position(&mut self, position: u8) -> Result<(), ServoError> {
+    fn set_position(&mut self, position: u8) -> Result<(), ServoError> {
         let duty = Self::angle_to_duty(position, self.min_pulse, self.max_pulse);
         self.pwm_pin.set_duty(duty);
         Ok(())
@@ -82,7 +82,6 @@ pub struct ServoSystem<P: PwmPin<Duty = u16>> {
 
 impl<P: PwmPin<Duty = u16> + 'static> ServoSystem<P> {
     pub fn new(pan_pin: P, tilt_pin: P) -> Self {
-        // Example min/max pulse widths; adjust based on your servo's specifications
         let min_pulse = 500; // 0.5ms pulse width
         let max_pulse = 2500; // 2.5ms pulse width
 

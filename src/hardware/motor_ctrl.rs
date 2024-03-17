@@ -1,39 +1,21 @@
 //! ## Motor Control Module
 //!
-//! Provides basic control functions for a single motor, including the ability to turn it 
-//! on/off and configure custom launch sequences.
+//! Adds basic single-motor control functionality, including
+//! configurable launch sequences to any type that implements
+//! [OutputPin](embedded_hal::digital::OutputPin).
 //!
-//! **Key Functions**
-//!
-//! * `on()`: Turns the motor on.
-//! * `off()`: Turns the motor off.
-//! * `launch()`: Executes a customizable launch sequence (e.g., rapid toggling for initialization).
-//! * `process_command()`: Handles commands received via the `MOTOR_CTRL_SIGNAL`.
-//!
-//! **Error Handling**
-//! * **PinError:** Indicates a generic error occurred when interacting with the GPIO pin. 
-//!   Consider adding more specific error types for finer-grained error handling if needed.
-//!
-//! **Usage**
+//! ### Example Usage
 //! ```rust
 //! 
-//! use hardware::motor_ctrl::*
-//! 
-//! async fn motor_control_task<PIN: Motor>(mut pin: PIN) {
+//! async fn motor_control_task<Pin: Motor>(&mut pin: Pin) {
 //!     loop {
-//!         match pin.process_command().await {
-//!             Ok(()) => (), 
-//!             Err(err) => { 
-//!                 todo!()
-//!                 }
-//!             }
+//!         pin.process_command().await.map_err(|error| todo!())?;
 //!         Timer::after(Duration::from_millis(10)).await; // Adjust polling interval as needed
 //!     }
 //! }
 //! ```
 
 use core::fmt;
-
 use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, signal::Signal};
 use embedded_hal_1::digital::OutputPin;
 use embassy_time::{Timer, Duration};
@@ -48,52 +30,54 @@ pub enum MotorCommand {
     Launch,
 }
 
-// Custom Error Type
-#[derive(fmt::Debug)]
-#[allow(missing_docs)]
-pub enum Error<> {
-    PinError,
-}
 
 // Motor Trait
 pub trait Motor {
-    fn on(&mut self) -> Result<(), Error>;
-    fn off(&mut self) -> Result<(), Error>;
-    async fn launch(&mut self) -> Result<(), Error>;
-    async fn process_command(&mut self) -> Result<(), Error>;
+
+    type Error;
+
+    /// Turn the motor on
+    fn on(&mut self) -> Result<(), Self::Error>;
+
+    /// Turn the motor off
+    fn off(&mut self) -> Result<(), Self::Error>;
+
+    /// Execute a customizable launch sequence (e.g. rapid toggling for initialization)
+    async fn launch(&mut self) -> Result<(), Self::Error>;
+
+    /// Handle commands received via the global `MOTOR_CTRL_SIGNAL`
+    async fn process_command(&mut self) -> Result<(), Self::Error>;
 }
+
 // Concrete Motor Implementations using a specific HAL & Embassy
-
 impl<T: OutputPin> Motor for T {
-    fn on(&mut self) -> Result<(), Error> {
-        self.set_high().map_err(|_| Error::PinError)
+
+    type Error = T::Error;
+
+    fn on(&mut self) -> Result<(), Self::Error> {
+        self.set_high()
     }
     
-    fn off(&mut self) -> Result<(), Error> {
-        self.set_low().map_err(|_| Error::PinError)
+    fn off(&mut self) -> Result<(), Self::Error> {
+        self.set_low()
     }
-    
-    async fn launch(&mut self) -> Result<(), Error> {
+
+    async fn launch(&mut self) -> Result<(), Self::Error> {
         for _ in 0..100 {
-            self.set_high().map_err(|_| Error::PinError);
+            self.set_high()?;
             Timer::after(Duration::from_millis(1)).await;
-            self.set_low().map_err(|_| Error::PinError);
+            self.set_low()?;
             Timer::after(Duration::from_millis(1)).await;
         }
     
         Ok(())
     }
 
-    async fn process_command(&mut self) -> Result<(), Error> {
-        let command = MOTOR_CTRL_SIGNAL.wait().await;
-        {
-           match command {
-                MotorCommand::On => self.on(),
-                MotorCommand::Off => self.off(),
-                MotorCommand::Launch => Ok(self.launch().await?),  
-           };
+    async fn process_command(&mut self) -> Result<(), Self::Error> {
+        match MOTOR_CTRL_SIGNAL.wait().await {
+            MotorCommand::On => self.on(),
+            MotorCommand::Off => self.off(),
+            MotorCommand::Launch => Ok(self.launch().await?),
         }
-        Ok(())
     }
 }
-

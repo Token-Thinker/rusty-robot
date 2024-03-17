@@ -50,11 +50,18 @@ rustflags = [
 ##########################################################
 #                     ESP32 Options                      #
 ##########################################################
-[target.xtensa-esp32-none-elf]
-
-runner = "espflash flash --monitor"
+[target.'cfg(target_arch = "riscv32")']
+runner    = "espflash flash --monitor"
 rustflags = [
   "-C", "link-arg=-Tlinkall.x",
+  "-C", "force-frame-pointers",
+]
+
+[target.'cfg(target_arch = "xtensa")']
+runner    = "espflash flash --monitor"
+rustflags = [
+  # GNU LD
+  "-C", "link-arg=-Wl,-Tlinkall.x",
   "-C", "link-arg=-nostartfiles",
   "-C", "link-arg=-Trom_functions.x",
 ]
