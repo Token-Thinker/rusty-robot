@@ -1,0 +1,34 @@
+{
+  "version": 1,
+  "author": "Michaël Guerrier [Tkr-App",
+  "editor": "wokwi",
+  "parts": [
+    {
+      "type": "board-esp32-devkit-c-v4",
+      "id": "esp",
+      "top": -288,
+      "left": -359.96,
+      "attrs": { "builder": "rust-nostd-esp" }
+    },
+    {
+      "type": "wokwi-led",
+      "id": "led1",
+      "top": -243.6,
+      "left": -207.4,
+      "attrs": { "color": "red" }
+    },
+    {
+      "type": "wokwi-resistor",
+      "id": "r1",
+      "top": -149.65,
+      "left": -240,
+      "attrs": { "value": "1000" }
+    }
+  ],
+  "connections": [
+    [ "r1:1", "esp:4", "green", [ "v0" ] ],
+    [ "esp:GND.3", "led1:C", "black", [ "h0" ] ],
+    [ "r1:2", "led1:A", "green", [ "v0" ] ]
+  ],
+  "dependencies": {}
+}

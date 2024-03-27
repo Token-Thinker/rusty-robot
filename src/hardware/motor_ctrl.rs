@@ -34,7 +34,7 @@ pub enum MotorCommand {
 // Motor Trait
 pub trait Motor {
 
-    type Error;
+    type Error: fmt::Debug;
 
     /// Turn the motor on
     fn on(&mut self) -> Result<(), Self::Error>;
@@ -62,12 +62,12 @@ impl<T: OutputPin> Motor for T {
         self.set_low()
     }
 
-    async fn launch(&mut self) -> Result<(), Self::Error> {
+    async fn launch(&mut self) -> Result<(), Self::Error> { //todo configure launch sequence for smooth transisiton
         for _ in 0..100 {
             self.set_high()?;
-            Timer::after(Duration::from_millis(1)).await;
+            Timer::after(Duration::from_millis(100)).await;
             self.set_low()?;
-            Timer::after(Duration::from_millis(1)).await;
+            Timer::after(Duration::from_millis(100)).await;
         }
     
         Ok(())

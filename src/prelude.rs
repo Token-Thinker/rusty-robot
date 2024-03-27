@@ -29,45 +29,21 @@ pub mod rp2040_prelude {
 #[cfg(all(target_os = "none", target_arch = "xtensa", target_vendor = "unknown"))]
 pub mod esp32_prelude {
     #[allow(clippy::single_component_path_imports)]
-    //pub use embedded_svc::wifi::{AccessPointConfiguration, ClientConfiguration, Configuration, Wifi};
     pub use static_cell::{make_static, StaticCell};
-
-    pub use picoserve::{Router, routing::get, response::IntoResponse, extract::{State, Form}};
-
+    pub use core::mem::MaybeUninit;
 
     pub use embassy_sync::{channel::{Channel, Receiver, Sender},blocking_mutex::raw::{CriticalSectionRawMutex,NoopRawMutex}, signal::Signal};
-    pub use embassy_executor::Spawner;
-    pub use embassy_time::{Duration, Ticker, Timer};
-    
-/*     pub use embassy_net::tcp::TcpSocket;
-    pub use embassy_net::{
-        Config, IpListenEndpoint, Ipv4Address, Ipv4Cidr, Stack, StackResources, StaticConfigV4,
-    }; */
+    pub use embassy_executor::{task as async_task, Spawner};
+    pub use embassy_time::{Duration, Timer};
 
-    pub use esp_backtrace;
-    pub use esp_println::{logger, print, println};
-
-/*     pub use esp_wifi::{initialize, EspWifiInitFor};
-    pub use esp_wifi::wifi::{
-        self, WifiApDevice, WifiController, WifiDevice, WifiEvent, WifiStaDevice, WifiState, WifiError
-    }; */
 
     pub use hal::{
         clock::{ClockControl,Clocks},
-        embassy::{self, executor::{Executor, FromCpu1, FromCpu2, InterruptExecutor}},
+        embassy::{self, executor::Executor},
         gpio::{self, PushPull, Output, GpioPin},
-        ledc::{
-            channel::{self, ChannelIFace},
-            timer::{self, TimerIFace},
-            HighSpeed,
-            LEDC,
-        },
         peripherals::Peripherals,
+        system::SystemExt,
+        timer::TimerGroup,
         prelude::*,
-        timer::TimerGroup, // Rng,
-        cpu_control::{CpuControl, Stack as hal_stack},
-        interrupt::Priority,
-        Rng,
-        get_core
     };
 }
