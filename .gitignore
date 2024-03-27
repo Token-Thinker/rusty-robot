@@ -16,6 +16,4 @@ target/
 #General
 .venv/**
 .vscode/**
-
-
-
+app/.DS_Store
