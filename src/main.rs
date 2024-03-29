@@ -1,5 +1,6 @@
 #![no_std]
 #![no_main]
+#![allow(async_fn_in_trait)]
 #![feature(type_alias_impl_trait)]
 
 pub mod hardware;
@@ -37,20 +38,19 @@ async fn motor_control_task(mut pin: impl Motor + 'static) {
 }
 
 #[async_task]
-async fn servo_control_task(pan_pin: impl Motor + 'static, tilt_pin: impl Motor + 'static) {
-    let mut servo_system = ServoSystem::new_servo_system(pan_pin, tilt_pin);
+async fn servo_control_task(mut servos: PanTiltServo<impl PwmPin + 'static>) {
 
     loop {
         // Loop to pan back and forth
         for angle in [0, 180].iter() {
-            servo_system.process_command(ServoCommand::Pan(*angle as i32))
+            servos.process_command(ServoCommand::Pan(*angle as i32))
                 .expect("Pan command failed");
             Timer::after(Duration::from_millis(1000)).await; // Non-blocking delay
         }
-
+ 
         // Loop to tilt back and forth
         for angle in [0, 180].iter() {
-            servo_system.process_command(ServoCommand::Tilt(*angle as i32))
+            servos.process_command(ServoCommand::Tilt(*angle as i32))
                 .expect("Tilt command failed");
             Timer::after(Duration::from_millis(1000)).await; // Non-blocking delay
         }
@@ -71,6 +71,7 @@ async fn main(_spawner: Spawner) {
     embassy::init(&clocks, timg0);
 
     let pin = io.pins.gpio4.into_push_pull_output();
+    let sev
 
     _spawner.spawn(motor_control_task(pin)).ok();
 

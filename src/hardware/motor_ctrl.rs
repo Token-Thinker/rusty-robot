@@ -17,7 +17,7 @@
 
 use core::fmt;
 use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, signal::Signal};
-use embedded_hal_1::digital::OutputPin;
+use embedded_hal::digital::OutputPin;
 use embassy_time::{Timer, Duration};
 
 pub static MOTOR_CTRL_SIGNAL: Signal<CriticalSectionRawMutex, MotorCommand> = Signal::new();
@@ -32,7 +32,6 @@ pub enum MotorCommand {
 
 
 // Motor Trait
-#[allow(async_fn_in_trait)]
 pub trait Motor {
 
     type Error: fmt::Debug;
