@@ -5,7 +5,7 @@
 pub mod hardware;
 pub mod prelude;
 
-use hardware::motor_ctrl::*;
+use hardware::{servo_ctrl::*,motor_ctrl::*};
 #[allow(unused_imports)]
 use prelude::*;
 
@@ -29,12 +29,33 @@ fn init_heap() {
 #[async_task]
 async fn motor_control_task(mut pin: impl Motor + 'static) {
     loop {
-        pin.process_command().await.unwrap();
-        Timer::after(Duration::from_millis(10)).await;
+        //pin.process_command().await.unwrap();
+        pin.launch().await.unwrap();
+        //Timer::after(Duration::from_millis(10)).await;
         
     }
 }
 
+#[async_task]
+async fn servo_control_task(pan_pin: impl Motor + 'static, tilt_pin: impl Motor + 'static) {
+    let mut servo_system = ServoSystem::new_servo_system(pan_pin, tilt_pin);
+
+    loop {
+        // Loop to pan back and forth
+        for angle in [0, 180].iter() {
+            servo_system.process_command(ServoCommand::Pan(*angle as i32))
+                .expect("Pan command failed");
+            Timer::after(Duration::from_millis(1000)).await; // Non-blocking delay
+        }
+
+        // Loop to tilt back and forth
+        for angle in [0, 180].iter() {
+            servo_system.process_command(ServoCommand::Tilt(*angle as i32))
+                .expect("Tilt command failed");
+            Timer::after(Duration::from_millis(1000)).await; // Non-blocking delay
+        }
+    }
+}
 
 #[cfg(all(target_os = "none", target_arch = "xtensa", target_vendor = "unknown"))]
 #[main]

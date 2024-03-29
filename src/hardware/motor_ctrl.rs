@@ -32,6 +32,7 @@ pub enum MotorCommand {
 
 
 // Motor Trait
+#[allow(async_fn_in_trait)]
 pub trait Motor {
 
     type Error: fmt::Debug;
@@ -69,7 +70,6 @@ impl<T: OutputPin> Motor for T {
             self.set_low()?;
             Timer::after(Duration::from_millis(100)).await;
         }
-    
         Ok(())
     }
 

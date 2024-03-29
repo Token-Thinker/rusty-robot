@@ -44,7 +44,10 @@ trait ServoControl {
     type Error;
 
     /// Convert the input angle from control to servo's min and max pulse widths
-    fn angle_to_duty(angle: u8, min_pulse: u16, max_pulse: u16) -> u16;
+    fn angle_to_duty(angle: u8, min_pulse: u16, max_pulse: u16) -> u16 {
+        let duty_range = max_pulse.saturating_sub(min_pulse);
+        min_pulse.saturating_add(duty_range.saturating_mul(angle as u16).saturating_div(180))
+    }
 
     /// Sets position of the servo based on the angle and duty
     fn set_position(&mut self, position: u8) -> Result<(), Error>;
@@ -54,17 +57,9 @@ trait ServoControl {
 impl<P: PwmPin<Duty = u16>> ServoControl for Servo<P>{
 
     type Error = Error;
-
     
-    fn angle_to_duty(angle: u8, min_pulse: u16, max_pulse: u16) -> u16 {
-        let duty_range = max_pulse as u32 - min_pulse as u32;
-        let duty = min_pulse as u32 + (duty_range * angle as u32 / 180);
-        duty as u16
-    }
-
     fn set_position(&mut self, position: u8) -> Result<(), Error> {
-        let duty = Self::angle_to_duty(position, self.min_pulse, self.max_pulse);
-        self.pwm_pin.set_duty(duty);
+        self.pwm_pin.set_duty(Self::angle_to_duty(position, self.min_pulse, self.max_pulse));
         Ok(())
     }
 }
@@ -97,12 +92,17 @@ impl<P: PwmPin<Duty = u16> + 'static> ServoSystem<P> {
     pub fn process_command(&mut self, command: ServoCommand) -> Result<(), Error> {
         match command {
             ServoCommand::Pan(value) => {
-                let pan_position = Self::map_value(value as f32, -100.0, 100.0, 0, 180);
-                self.pan_servo.set_position(pan_position)
+                self.pan_servo.set_position(
+                    Self::map_value(
+                        value as f32, 
+                        -100.0, 
+                        100.0, 
+                        0, 
+                        180)
+                    )
             },
             ServoCommand::Tilt(value) => {
-                let tilt_position = Self::map_value(value as f32, -125.0, 125.0, 0, 180);
-                self.tilt_servo.set_position(tilt_position)
+                self.tilt_servo.set_position(Self::map_value(value as f32, -125.0, 125.0, 0, 180))
             }
             ServoCommand::Rest(_) => todo!(),
         }
