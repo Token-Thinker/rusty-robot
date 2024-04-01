@@ -35,21 +35,36 @@ pub enum ServoCommand {
     PanTilt(i32, i32),
 }
 
-pub struct PanTiltServo<S: PwmPin> {
-    pan: S,
-    tilt: S,
+pub struct PanTiltServos<P: PwmPin, T: PwmPin> {
+    pan: P,
+    tilt: T,
 }
 
-// Implementation for Pan & Tilt Servo System
-impl<Servo: PwmPin> PanTiltServo<Servo> {
-    
+impl<P: PwmPin, T: PwmPin> PanTiltServos<P, T> {
+
     /// Create a new `PanTiltServos` instance from the supplied pins
-    pub fn new(pan: Servo, tilt: Servo) -> Self {
+    pub fn new(pan: P, tilt: T) -> Self {
         Self { pan, tilt }
     }
+}
+
+pub trait PanTiltServoCtrl {
+
+    type Error: fmt::Debug;
 
     /// Move the servo pair to the specified coordinates
-    pub fn move_to(&mut self, x: u16, y: u16) -> Result<(), Servo::Error> {
+    fn move_to(&mut self, x: u16, y: u16) -> Result<(), Self::Error>;
+
+    /// Process websocket commands
+    fn process_servo_command(&mut self, command: ServoCommand) -> Result<(), Self::Error>;
+    
+}
+
+impl<P: PwmPin<Error = E>, T: PwmPin<Error = E>, E: fmt::Debug> PanTiltServoCtrl for PanTiltServos<P, T> {
+
+    type Error = E;
+    
+    fn move_to(&mut self, x: u16, y: u16) -> Result<(), Self::Error> {
         // TODO(mguerrier): double check that this behaves as expected in the real world
         match (self.pan.set_duty_cycle_fraction(x, 180), self.tilt.set_duty_cycle_fraction(y, 180)) {
             (Ok(()), Ok(())) => Ok(()),
@@ -61,14 +76,13 @@ impl<Servo: PwmPin> PanTiltServo<Servo> {
         }
     }
 
-    /// Process websocket commands
-    pub fn process_command(&mut self, command: ServoCommand) -> Result<(), Servo::Error> {
+    
+    fn process_servo_command(&mut self, command: ServoCommand) -> Result<(), Self::Error> {
         match command {
             ServoCommand::Rest(_) => todo!(),
             ServoCommand::Pan(value) => todo!(),
             ServoCommand::Tilt(value) => todo!(),
-            ServoCommand::PanTilt(x, y) => todo!()
-            
+            ServoCommand::PanTilt(x, y) => self.move_to(x as u16, y as u16)
         }
     }
 }

@@ -45,5 +45,6 @@ pub mod esp32_prelude {
         system::SystemExt,
         timer::TimerGroup,
         prelude::*,
+        mcpwm::{operator::PwmPinConfig, timer::PwmWorkingMode, PeripheralClockConfig, MCPWM}
     };
 }
