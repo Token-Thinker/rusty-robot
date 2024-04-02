@@ -37,18 +37,21 @@ async fn motor_control_task(mut pin: impl Motor + 'static) {
     }
 }
 
-//PanTiltServo<impl PwmPin + 'static, impl PwmPin + 'static>
-
-
 #[async_task]
 async fn servo_control_task(mut servos: impl PanTiltServoCtrl + 'static) {
     loop {
-        // Loop to move in a pattern
-        for angle in [0, 179].iter() {
-            // Combining pan and tilt movements into a single command
+        // Go forward
+        for angle in [0, 180].iter() {
             servos.process_servo_command(ServoCommand::PanTilt(*angle as i32, *angle as i32))
                 .expect("PanTilt command failed");
-            Timer::after(Duration::from_millis(10000)).await;
+            Timer::after(Duration::from_millis(100)).await;
+        }
+    
+        // Go backward
+        for angle in [180, 0].iter().rev() { 
+            servos.process_servo_command(ServoCommand::PanTilt(*angle as i32, *angle as i32))
+                .expect("PanTilt command failed");
+            Timer::after(Duration::from_millis(100)).await;
         }
     }
 }
@@ -56,6 +59,8 @@ async fn servo_control_task(mut servos: impl PanTiltServoCtrl + 'static) {
 #[cfg(all(target_os = "none", target_arch = "xtensa", target_vendor = "unknown"))]
 #[main]
 async fn main(_spawner: Spawner) {
+    use hal::ledc::HighSpeed;
+
     init_heap();
 
     let peripherals = Peripherals::take();
@@ -69,35 +74,48 @@ async fn main(_spawner: Spawner) {
 
     //initialize pins
     let pin = io.pins.gpio4.into_push_pull_output();
-    let pan_pin = io.pins.gpio12;
-    let tilt_pin = io.pins.gpio14;
+    let pan_pin = io.pins.gpio12.into_push_pull_output();
+    let tilt_pin = io.pins.gpio14.into_push_pull_output();
 
 
-    // initialize peripheral
-    //#[cfg(feature = "esp32h2")]
-    //let clock_cfg = PeripheralClockConfig::with_frequency(&clocks, 40.MHz()).unwrap();
-    //#[cfg(not(feature = "esp32h2"))]
-    let clock_cfg = PeripheralClockConfig::with_frequency(&clocks, 32u32.MHz()).unwrap();
-    
-    let mut mcpwm = MCPWM::new(peripherals.MCPWM0, clock_cfg);
-    
-    // connect operator0 to timer0
-    mcpwm.operator0.set_timer(&mcpwm.timer0);
+    //initialize ledc
+    let ledc = make_static!(LEDC::new(peripherals.LEDC, make_static!(clocks)));
+    //ledc.set_global_slow_clock(LSGlobalClkSource::APBClk);
 
-    // connect operator0 to pan_pin
-    let pwm_pan_pin = mcpwm
-    .operator0
-    .with_pin_a(pan_pin, PwmPinConfig::UP_ACTIVE_HIGH);
-    
-    // connect operator1 to titl_pin
-    let pwm_tilt_pin = mcpwm
-    .operator1
-    .with_pin_a(tilt_pin, PwmPinConfig::UP_ACTIVE_HIGH);
+    //initialize timer
+    let lstimer1 = make_static!(ledc.get_timer::<HighSpeed>(timer::Number::Timer1));
 
-    let servos = PanTiltServos::new(pwm_pan_pin, pwm_tilt_pin);
+    lstimer1
+    .configure(timer::config::Config {
+        duty: timer::config::Duty::Duty12Bit,
+        clock_source: timer::HSClockSource::APBClk,
+        frequency: 50u32.Hz(),
+    })
+    .unwrap();
+
+    //configure channel
+    let mut channel1 = ledc.get_channel(channel::Number::Channel1, pan_pin);
+    let mut channel2 = ledc.get_channel(channel::Number::Channel2, tilt_pin);
+
+    channel1
+        .configure(channel::config::Config {
+            timer: lstimer1,
+            duty_pct: 10,
+            pin_config: channel::config::PinConfig::PushPull,
+        })
+        .unwrap();
+
+    channel2
+        .configure(channel::config::Config {
+            timer: lstimer1,
+            duty_pct: 10,
+            pin_config: channel::config::PinConfig::PushPull,
+        })
+        .unwrap();
+
+    let servos = PanTiltServos::new(channel1, channel2);
 
     _spawner.spawn(motor_control_task(pin)).ok();
     _spawner.spawn(servo_control_task(servos)).ok();
-
 
 }
