@@ -1,7 +1,10 @@
+[patch.crates-io]
+hal = { package = "esp-hal", path = "../esp-hal/esp-hal", version = "0.16.1"}
+
 ##########################################################
 #                 Environment Variables                  #
 ##########################################################
-#[env]
+[env]
 DEFMT_LOG = "debug"
 ESP_LOGLEVEL="DEBUG"
 

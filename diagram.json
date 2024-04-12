@@ -29,6 +29,8 @@
     { "type": "wokwi-servo", "id": "servo1", "top": -174.8, "left": -28.8, "attrs": {} }
   ],
   "connections": [
+    [ "esp:TX", "$serialMonitor:RX", "", [] ],
+    [ "esp:RX", "$serialMonitor:TX", "", [] ],
     [ "r1:1", "esp:4", "green", [ "v0" ] ],
     [ "r1:2", "led1:A", "green", [ "v0" ] ],
     [ "esp:5V", "servo2:V+", "red", [ "h-28.65", "v-220.8", "h163.2", "v57.6" ] ],

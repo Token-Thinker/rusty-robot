@@ -36,7 +36,6 @@ pub mod esp32_prelude {
     pub use embassy_executor::{task as async_task, Spawner};
     pub use embassy_time::{Duration, Timer};
 
-
     pub use hal::{
         clock::{ClockControl,Clocks},
         embassy::{self, executor::Executor},

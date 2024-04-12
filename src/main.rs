@@ -6,7 +6,8 @@
 pub mod hardware;
 pub mod prelude;
 
-use hardware::{servo_ctrl::*,motor_ctrl::*};
+use esp_println::println;
+use hardware::{servo_ctrl::*, motor_ctrl::*};
 #[allow(unused_imports)]
 use prelude::*;
 
@@ -30,45 +31,57 @@ fn init_heap() {
 #[async_task]
 async fn motor_control_task(mut pin: impl Motor + 'static) {
     loop {
-        //pin.process_command().await.unwrap();
-        pin.launch().await.unwrap();
-        //Timer::after(Duration::from_millis(10)).await;
-        
+        pin.process_command().await.unwrap();
+        Timer::after(Duration::from_millis(10)).await;
     }
+
+    //Test loop
+/*    loop{
+        pin.launch().await.unwrap();
+    }*/
 }
 
 #[async_task]
 async fn servo_control_task(mut servos: impl PanTiltServoCtrl + 'static) {
+
+    loop {
+        servos.process_servo_command().await.unwrap();
+        Timer::after(Duration::from_millis(10)).await;
+    }
+
+    //Test loop
+/*    fn pwm_value(angle: u8) -> u16 { 409 + ((2048 - 409) / 180 * u16::from(angle))}
+
     loop {
         // Go forward
-        for angle in [0, 180].iter() {
-            servos.process_servo_command(ServoCommand::PanTilt(*angle as i32, *angle as i32))
+        for angle in 0..=180{
+            servos.move_to(pwm_value(angle),pwm_value(angle))
                 .expect("PanTilt command failed");
-            Timer::after(Duration::from_millis(100)).await;
+            Timer::after(Duration::from_millis(10)).await;
         }
-    
+
         // Go backward
-        for angle in [180, 0].iter().rev() { 
-            servos.process_servo_command(ServoCommand::PanTilt(*angle as i32, *angle as i32))
+        for angle in (0..=180).rev() {
+            servos.move_to(pwm_value(angle),pwm_value(angle))
                 .expect("PanTilt command failed");
-            Timer::after(Duration::from_millis(100)).await;
+            Timer::after(Duration::from_millis(10)).await;
         }
-    }
+    }*/
 }
 
 #[cfg(all(target_os = "none", target_arch = "xtensa", target_vendor = "unknown"))]
 #[main]
 async fn main(_spawner: Spawner) {
-    use hal::ledc::HighSpeed;
+    use core::fmt::Write;
 
     init_heap();
 
     let peripherals = Peripherals::take();
     let system = peripherals.SYSTEM.split();
-    let clocks = ClockControl::boot_defaults(system.clock_control).freeze();
-    let io = gpio::IO::new(peripherals.GPIO, peripherals.IO_MUX); 
+    let clocks = ClockControl::max(system.clock_control).freeze();
+    let io = gpio::IO::new(peripherals.GPIO, peripherals.IO_MUX);
 
-    // initialize emabssy
+    // initialize emabassy
     let timg0 = TimerGroup::new(peripherals.TIMG0, &clocks);
     embassy::init(&clocks, timg0);
 
@@ -77,18 +90,17 @@ async fn main(_spawner: Spawner) {
     let pan_pin = io.pins.gpio12.into_push_pull_output();
     let tilt_pin = io.pins.gpio14.into_push_pull_output();
 
-
     //initialize ledc
-    let ledc = make_static!(LEDC::new(peripherals.LEDC, make_static!(clocks)));
-    //ledc.set_global_slow_clock(LSGlobalClkSource::APBClk);
+    let mut ledc = make_static!(LEDC::new(peripherals.LEDC, make_static!(clocks)));
+    ledc.set_global_slow_clock(LSGlobalClkSource::APBClk);
 
     //initialize timer
-    let lstimer1 = make_static!(ledc.get_timer::<HighSpeed>(timer::Number::Timer1));
+    let lstimer1 = make_static!(ledc.get_timer::<LowSpeed>(timer::Number::Timer1));
 
     lstimer1
     .configure(timer::config::Config {
-        duty: timer::config::Duty::Duty12Bit,
-        clock_source: timer::HSClockSource::APBClk,
+        duty: timer::config::Duty::Duty14Bit,
+        clock_source: timer::LSClockSource::APBClk,
         frequency: 50u32.Hz(),
     })
     .unwrap();

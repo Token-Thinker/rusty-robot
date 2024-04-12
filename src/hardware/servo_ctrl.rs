@@ -8,15 +8,11 @@
 //! use servo_control::*
 //!
 //! let mut servo_system = ServoSystem::new(pan_pin, tilt_pin);
+//! loop {
+//!    servos.process_servo_command().await.unwrap();
+//!    Timer::after(Duration::from_millis(10)).await;
+//!  }
 //!
-//! // To pan to 45 degrees
-//! servo_system.process_command(ServoCommand::Pan(45)).expect("Pan command failed");
-//!
-//! // To tilt to 90 degrees
-//! servo_system.process_command(ServoCommand::Tilt(90)).expect("Tilt command failed");
-//!
-//! // Move servos to a rest position or disable them
-//! servo_system.process_command(ServoCommand::Rest(true)).expect("Rest command failed");
 //! ```
 
 use core::fmt;
@@ -29,10 +25,10 @@ pub static SERVO_CTRL_SIGNAL: Signal<CriticalSectionRawMutex, ServoCommand> = Si
 //ServoCommand
 #[derive(fmt::Debug)]
 pub enum ServoCommand {
-    Pan(i32),
-    Tilt(i32),
+    Pan(u8),
+    Tilt(u8),
     Rest(bool),
-    PanTilt(i32, i32),
+    PanTilt(u8, u8),
 }
 
 pub struct PanTiltServos<P: PwmPin, T: PwmPin> {
@@ -53,20 +49,21 @@ pub trait PanTiltServoCtrl {
     type Error: fmt::Debug;
 
     /// Move the servo pair to the specified coordinates
-    fn move_to(&mut self, x: u16, y: u16) -> Result<(), Self::Error>;
+    fn move_to(&mut self, duty_x: u16, duty_y: u16) -> Result<(), Self::Error>;
 
     /// Process websocket commands
-    fn process_servo_command(&mut self, command: ServoCommand) -> Result<(), Self::Error>;
-    
+    async fn process_servo_command(&mut self) -> Result<(), Self::Error>;
+
+    ///Helper function to convert angle (0 to 180) to pwm signal based on 14bit
+    fn pwm_value(angle: u8) -> u16 { 409 + ((2048 - 409) / 180 * u16::from(angle)) }
 }
 
 impl<P: PwmPin<Error = E>, T: PwmPin<Error = E>, E: fmt::Debug> PanTiltServoCtrl for PanTiltServos<P, T> {
 
     type Error = E;
     
-    fn move_to(&mut self, x: u16, y: u16) -> Result<(), Self::Error> {
-        // TODO(mguerrier): double check that this behaves as expected in the real world
-        match (self.pan.set_duty_cycle_fraction(x, 180), self.tilt.set_duty_cycle_fraction(y, 180)) {
+    fn move_to(&mut self, duty_x: u16, duty_y: u16) -> Result<(), Self::Error> {
+        match (self.pan.set_duty_cycle(duty_x), self.tilt.set_duty_cycle(duty_y)) {
             (Ok(()), Ok(())) => Ok(()),
             (Err(error), Ok(())) | (Ok(()), Err(error))=> Err(error),
             (Err(pan_error), Err(tilt_error)) => {
@@ -76,13 +73,12 @@ impl<P: PwmPin<Error = E>, T: PwmPin<Error = E>, E: fmt::Debug> PanTiltServoCtrl
         }
     }
 
-    
-    fn process_servo_command(&mut self, command: ServoCommand) -> Result<(), Self::Error> {
-        match command {
+    async fn process_servo_command(&mut self) -> Result<(), Self::Error> {
+        match SERVO_CTRL_SIGNAL.wait().await {
             ServoCommand::Rest(_) => todo!(),
             ServoCommand::Pan(value) => todo!(),
             ServoCommand::Tilt(value) => todo!(),
-            ServoCommand::PanTilt(x, y) => self.move_to(x as u16, y as u16)
+            ServoCommand::PanTilt(x, y) => self.move_to(Self::pwm_value(x), Self::pwm_value(y))
         }
     }
 }

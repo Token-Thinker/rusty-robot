@@ -62,7 +62,7 @@ impl<T: OutputPin> Motor for T {
         self.set_low()
     }
 
-    async fn launch(&mut self) -> Result<(), Self::Error> { //todo configure launch sequence for smooth transisiton
+    async fn launch(&mut self) -> Result<(), Self::Error> { //todo configure launch sequence for smooth transition
         for _ in 0..100 {
             self.set_high()?;
             Timer::after(Duration::from_millis(100)).await;
