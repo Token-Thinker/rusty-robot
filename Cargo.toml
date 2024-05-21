@@ -23,7 +23,7 @@ embassy-macros = "^0.2.1"
 embassy-futures = "^0.1.1"
 embassy-executor = "^0.5.0"
 embassy-sync = "^0.5.0"
-embassy-net = { version = "^0.4.0", features = ["proto-ipv4", "tcp", "udp", "dns", "medium-ethernet"] }
+embassy-net = { version = "^0.4.0", features = ["proto-ipv4", "tcp", "udp", "dns", "medium-ethernet", "dhcpv4"] }
 
 static_cell = { version = "^2.0.0", features = ["nightly"] }
 
@@ -50,18 +50,30 @@ embassy-rp = "^0.1.0"
 ##########################################################
 #              ESP32-Specific Dependencies               #
 ##########################################################
+[profile.dev.package.esp-wifi]
+opt-level = 3
+
+
 [target.xtensa-esp32-none-elf.dependencies]
 
 esp-println = { version = "^0.9.1", features = ["log", "esp32"] }
 esp-alloc = "^0.3.0"
 
-hal = { package = "esp-hal", version = "^0.16.1", features = [
+esp-wifi = { version = "^0.5.1", features = [
+    "esp32",
+    "wifi",
+    "tcp",
+    "udp",
+    "embedded-svc",
+    "embassy-net"
+] }
+
+hal = { package = "esp-hal", version = "^0.17.0", features = [
     "esp32",
     "log",
     "debug",
     "async",
     "embassy",
-    "vectored",
     "embassy-time-timg0",
     "embassy-executor-thread",
 ] }

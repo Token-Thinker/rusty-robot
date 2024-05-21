@@ -35,16 +35,20 @@ pub mod esp32_prelude {
     pub use embassy_sync::{channel::{Channel, Receiver, Sender},blocking_mutex::raw::{CriticalSectionRawMutex,NoopRawMutex}, signal::Signal};
     pub use embassy_executor::{task as async_task, Spawner};
     pub use embassy_time::{Duration, Timer};
+    pub use embassy_net::{Config, Stack, StackResources, StaticConfigV4, Ipv4Address};
+
+    pub use esp_println::println;
+    pub use esp_wifi::{EspWifiInitFor,initialize,wifi::{ClientConfiguration, Configuration, WifiController, WifiDevice, WifiEvent, WifiStaDevice, WifiState}};
 
     pub use hal::{
-        clock::{ClockControl,Clocks},
+        rng::Rng,
+        {clock::{ClockControl,Clocks},
         embassy::{self, executor::Executor},
         gpio::{self, PushPull, Output, GpioPin},
         peripherals::Peripherals,
         system::SystemExt,
         timer::TimerGroup,
-        prelude::*,
-        mcpwm::{operator::PwmPinConfig, timer::PwmWorkingMode, PeripheralClockConfig, MCPWM},
+        prelude::{main, _fugit_RateExtU32,entry},
         ledc::{
             channel::{self, ChannelIFace},
             timer::{self, TimerIFace},
@@ -52,5 +56,23 @@ pub mod esp32_prelude {
             LowSpeed,
             LEDC,
         },
-    };
+    }};
+
+    pub use esp_alloc::EspHeap;
+
+    #[panic_handler]
+    pub fn panic(_info: &core::panic::PanicInfo) -> ! {
+        loop {}
+    }
+
+    #[global_allocator]
+    static ALLOCATOR: EspHeap = EspHeap::empty();
+
+    pub fn init_heap() {
+        const HEAP_SIZE: usize = 32 * 1024;
+        static mut HEAP: MaybeUninit<[u8; HEAP_SIZE]> = MaybeUninit::uninit();
+        unsafe {
+            ALLOCATOR.init(HEAP.as_mut_ptr() as *mut u8, HEAP_SIZE);
+        }
+    }
 }

@@ -4,29 +4,13 @@
 #![feature(type_alias_impl_trait)]
 
 pub mod hardware;
+pub mod network;
 pub mod prelude;
 
-use esp_println::println;
 use hardware::{servo_ctrl::*, motor_ctrl::*};
+use network::ntwk;
 #[allow(unused_imports)]
 use prelude::*;
-
-#[panic_handler]
-fn panic(_info: &core::panic::PanicInfo) -> ! {
-    loop {}
-}
-
-#[global_allocator]
-static ALLOCATOR: esp_alloc::EspHeap = esp_alloc::EspHeap::empty();
-
-fn init_heap() {
-    const HEAP_SIZE: usize = 32 * 1024;
-    static mut HEAP: MaybeUninit<[u8; HEAP_SIZE]> = MaybeUninit::uninit();
-
-    unsafe {
-        ALLOCATOR.init(HEAP.as_mut_ptr() as *mut u8, HEAP_SIZE);
-    }
-}
 
 #[async_task]
 async fn motor_control_task(mut pin: impl Motor + 'static) {
@@ -36,9 +20,9 @@ async fn motor_control_task(mut pin: impl Motor + 'static) {
     }
 
     //Test loop
-/*    loop{
-        pin.launch().await.unwrap();
-    }*/
+    /*    loop{
+            pin.launch().await.unwrap();
+        }*/
 }
 
 #[async_task]
@@ -50,30 +34,28 @@ async fn servo_control_task(mut servos: impl PanTiltServoCtrl + 'static) {
     }
 
     //Test loop
-/*    fn pwm_value(angle: u8) -> u16 { 409 + ((2048 - 409) / 180 * u16::from(angle))}
+    /*    fn pwm_value(angle: u8) -> u16 { 409 + ((2048 - 409) / 180 * u16::from(angle))}
 
-    loop {
-        // Go forward
-        for angle in 0..=180{
-            servos.move_to(pwm_value(angle),pwm_value(angle))
-                .expect("PanTilt command failed");
-            Timer::after(Duration::from_millis(10)).await;
-        }
+        loop {
+            // Go forward
+            for angle in 0..=180{
+                servos.move_to(pwm_value(angle),pwm_value(angle))
+                    .expect("PanTilt command failed");
+                Timer::after(Duration::from_millis(10)).await;
+            }
 
-        // Go backward
-        for angle in (0..=180).rev() {
-            servos.move_to(pwm_value(angle),pwm_value(angle))
-                .expect("PanTilt command failed");
-            Timer::after(Duration::from_millis(10)).await;
-        }
-    }*/
+            // Go backward
+            for angle in (0..=180).rev() {
+                servos.move_to(pwm_value(angle),pwm_value(angle))
+                    .expect("PanTilt command failed");
+                Timer::after(Duration::from_millis(10)).await;
+            }
+        }*/
 }
 
 #[cfg(all(target_os = "none", target_arch = "xtensa", target_vendor = "unknown"))]
 #[main]
 async fn main(_spawner: Spawner) {
-    use core::fmt::Write;
-
     init_heap();
 
     let peripherals = Peripherals::take();
@@ -82,8 +64,33 @@ async fn main(_spawner: Spawner) {
     let io = gpio::IO::new(peripherals.GPIO, peripherals.IO_MUX);
 
     // initialize emabassy
-    let timg0 = TimerGroup::new(peripherals.TIMG0, &clocks);
+    let timg0 = TimerGroup::new_async(peripherals.TIMG0, &clocks);
     embassy::init(&clocks, timg0);
+
+    //Network Services Configurations
+    let timer = TimerGroup::new(peripherals.TIMG1, &clocks, None).timer0;
+    let config = Config::dhcpv4(Default::default());
+    let init = initialize(
+        EspWifiInitFor::Wifi,
+        timer,
+        Rng::new(peripherals.RNG),
+        system.radio_clock_control,
+        &clocks,
+    ).unwrap();
+
+    let wifi = peripherals.WIFI;
+    let (wifi_interface, controller) =
+        esp_wifi::wifi::new_with_mode(&init, wifi, WifiStaDevice).unwrap();
+
+    let seed = 1234; // very random, very secure seed
+
+    // Init network stack
+    let stack = &*make_static!(Stack::new(
+        wifi_interface,
+        config,
+        make_static!(StackResources::<3>::new()),
+        seed
+    ));
 
     //initialize pins
     let pin = io.pins.gpio4.into_push_pull_output();
@@ -91,7 +98,7 @@ async fn main(_spawner: Spawner) {
     let tilt_pin = io.pins.gpio14.into_push_pull_output();
 
     //initialize ledc
-    let mut ledc = make_static!(LEDC::new(peripherals.LEDC, make_static!(clocks)));
+    let ledc = make_static!(LEDC::new(peripherals.LEDC, make_static!(clocks)));
     ledc.set_global_slow_clock(LSGlobalClkSource::APBClk);
 
     //initialize timer
@@ -127,6 +134,11 @@ async fn main(_spawner: Spawner) {
 
     let servos = PanTiltServos::new(channel1, channel2);
 
+    //network tasks
+    _spawner.spawn(ntwk::connection(controller)).ok();
+    _spawner.spawn(ntwk::net_task(stack)).ok();
+
+    //hardware task
     _spawner.spawn(motor_control_task(pin)).ok();
     _spawner.spawn(servo_control_task(servos)).ok();
 
