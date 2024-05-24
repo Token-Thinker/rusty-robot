@@ -28,25 +28,6 @@ async fn servo_control_task(mut servos: impl PanTiltServoCtrl + 'static) {
         servos.process_servo_command().await.unwrap();
         Timer::after(Duration::from_millis(10)).await;
     }
-
-    //Test loop
-    /*    fn pwm_value(angle: u8) -> u16 { 409 + ((2048 - 409) / 180 * u16::from(angle))}
-
-        loop {
-            // Go forward
-            for angle in 0..=180{
-                servos.move_to(pwm_value(angle),pwm_value(angle))
-                    .expect("PanTilt command failed");
-                Timer::after(Duration::from_millis(10)).await;
-            }
-
-            // Go backward
-            for angle in (0..=180).rev() {
-                servos.move_to(pwm_value(angle),pwm_value(angle))
-                    .expect("PanTilt command failed");
-                Timer::after(Duration::from_millis(10)).await;
-            }
-        }*/
 }
 
 #[cfg(all(target_os = "none", target_arch = "xtensa", target_vendor = "unknown"))]
