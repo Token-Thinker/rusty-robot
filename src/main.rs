@@ -19,10 +19,6 @@ async fn motor_control_task(mut pin: impl Motor + 'static) {
         Timer::after(Duration::from_millis(10)).await;
     }
 
-    //Test loop
-    /*    loop{
-            pin.launch().await.unwrap();
-        }*/
 }
 
 #[async_task]
