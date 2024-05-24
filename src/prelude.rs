@@ -29,45 +29,50 @@ pub mod rp2040_prelude {
 #[cfg(all(target_os = "none", target_arch = "xtensa", target_vendor = "unknown"))]
 pub mod esp32_prelude {
     #[allow(clippy::single_component_path_imports)]
-    pub use embedded_svc::wifi::{AccessPointConfiguration, ClientConfiguration, Configuration, Wifi};
     pub use static_cell::{make_static, StaticCell};
-
-    pub use picoserve::{Router, routing::get, response::IntoResponse, extract::{State, Form}};
-
+    pub use core::mem::MaybeUninit;
 
     pub use embassy_sync::{channel::{Channel, Receiver, Sender},blocking_mutex::raw::{CriticalSectionRawMutex,NoopRawMutex}, signal::Signal};
-    pub use embassy_executor::Spawner;
-    pub use embassy_time::{Duration, Ticker, Timer};
-    
-    pub use embassy_net::tcp::TcpSocket;
-    pub use embassy_net::{
-        Config, IpListenEndpoint, Ipv4Address, Ipv4Cidr, Stack, StackResources, StaticConfigV4,
-    };
+    pub use embassy_executor::{task as async_task, Spawner};
+    pub use embassy_time::{Duration, Timer};
+    pub use embassy_net::{Config, Stack, StackResources, StaticConfigV4, Ipv4Address};
 
-    pub use esp_backtrace;
-    pub use esp_println::{logger, print, println};
-
-    pub use esp_wifi::{initialize, EspWifiInitFor};
-    pub use esp_wifi::wifi::{
-        self, WifiApDevice, WifiController, WifiDevice, WifiEvent, WifiStaDevice, WifiState, WifiError
-    };
+    pub use esp_println::println;
+    pub use esp_wifi::{EspWifiInitFor,initialize,wifi::{ClientConfiguration, Configuration, WifiController, WifiDevice, WifiEvent, WifiStaDevice, WifiState}};
 
     pub use hal::{
-        clock::{ClockControl,Clocks},
-        embassy::{self, executor::{Executor, FromCpu1, FromCpu2, InterruptExecutor}},
+        rng::Rng,
+        {clock::{ClockControl,Clocks},
+        embassy::{self, executor::Executor},
         gpio::{self, PushPull, Output, GpioPin},
+        peripherals::Peripherals,
+        system::SystemExt,
+        timer::TimerGroup,
+        prelude::{main, _fugit_RateExtU32,entry},
         ledc::{
             channel::{self, ChannelIFace},
             timer::{self, TimerIFace},
-            HighSpeed,
+            LSGlobalClkSource,
+            LowSpeed,
             LEDC,
         },
-        peripherals::Peripherals,
-        prelude::*,
-        timer::TimerGroup, // Rng,
-        cpu_control::{CpuControl, Stack as hal_stack},
-        interrupt::Priority,
-        Rng,
-        get_core
-    };
+    }};
+
+    pub use esp_alloc::EspHeap;
+
+    #[panic_handler]
+    pub fn panic(_info: &core::panic::PanicInfo) -> ! {
+        loop {}
+    }
+
+    #[global_allocator]
+    static ALLOCATOR: EspHeap = EspHeap::empty();
+
+    pub fn init_heap() {
+        const HEAP_SIZE: usize = 32 * 1024;
+        static mut HEAP: MaybeUninit<[u8; HEAP_SIZE]> = MaybeUninit::uninit();
+        unsafe {
+            ALLOCATOR.init(HEAP.as_mut_ptr() as *mut u8, HEAP_SIZE);
+        }
+    }
 }

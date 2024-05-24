@@ -6,47 +6,38 @@ authors = ["Michael Guerrier <token.thinkers@gmail.com>"]
 edition = "2021"
 license = "MIT OR Apache-2.0"
 
-[profile.dev.package.esp-wifi]
-opt-level = 3
-
 
 ##########################################################
 #               Core Project Dependencies                #
 ##########################################################
 [dependencies]
 
-log = "*"
+log = "^0.4.21"
+defmt = "^0.3.6"
 
-embedded-svc = { version = "*", default-features = false, features = [] }
-embedded-io = "*"
-embedded-io-async = "*"
+embedded-io = "^0.6.1"
+embedded-hal = "^1.0.0"
 
-embassy-time = { version = "*", features = ["nightly"] }
-embassy-macros = "*"
-embassy-futures = "*"
-embassy-executor = { version = "^0.3.3", features = ["nightly"] }
-embassy-sync = "*"
-embassy-net = "*"
+embassy-time = { version = "^0.3.0", features = ["generic-queue"] }
+embassy-macros = "^0.2.1"
+embassy-futures = "^0.1.1"
+embassy-executor = "^0.5.0"
+embassy-sync = "^0.5.0"
+embassy-net = { version = "^0.4.0", features = ["proto-ipv4", "tcp", "udp", "dns", "medium-ethernet", "dhcpv4"] }
 
-picoserve = "*"
+static_cell = { version = "^2.0.0", features = ["nightly"] }
 
-
-smoltcp = { version = "*", default-features = false, features = [
-    "socket-udp",
-    "proto-igmp",
-    "proto-ipv4",
-    "socket-raw",
-    "socket-tcp",
-    "socket-icmp",
-    "proto-dhcpv4",
-    "socket-dhcpv4",
-    "medium-ethernet",
-] }
-static_cell = { version = "*", features = ["nightly"] }
+serde = { version = "^1.0.197", default-features = false, features = ["derive"] }
+serde_json = { version = "^1.0.114", features = ["alloc"], default-features = false }
 
 
-serde = { version = "*", default-features = false, features = ["derive"] }
-serde_json = { version = "*", features = ["alloc"], default-features = false }
+
+##########################################################
+#               Development Dependencies                 #
+##########################################################
+
+[dev-dependencies]
+##std = { features = ["std"], version = "1.x" }
 
 
 ##########################################################
@@ -54,37 +45,43 @@ serde_json = { version = "*", features = ["alloc"], default-features = false }
 ##########################################################
 [target.thumbv6m-none-eabi.dependencies]
 
-embassy-rp = "*"
+embassy-rp = "^0.1.0"
 
 ##########################################################
 #              ESP32-Specific Dependencies               #
 ##########################################################
+[profile.dev.package.esp-wifi]
+opt-level = 3
+
+
 [target.xtensa-esp32-none-elf.dependencies]
 
-esp-println = { version = "*", features = ["log", "esp32"] }
-esp-alloc = { version = "*" }
+esp-println = { version = "^0.9.1", features = ["log", "esp32"] }
+esp-alloc = "^0.3.0"
 
-hal = { package = "esp32-hal", version = "*", features = [
+esp-wifi = { version = "^0.5.1", features = [
+    "esp32",
+    "wifi",
+    "tcp",
+    "udp",
+    "embedded-svc",
+    "embassy-net"
+] }
+
+hal = { package = "esp-hal", version = "^0.17.0", features = [
+    "esp32",
     "log",
+    "debug",
     "async",
     "embassy",
-    "vectored",
     "embassy-time-timg0",
     "embassy-executor-thread",
-    "embassy-executor-interrupt",
 ] }
-esp-wifi = { version = "*", features = [
-    "wifi",
-    "async",
+
+esp-backtrace = { version = "^0.11.1", features = [
     "esp32",
-    "utils",
-    "esp-now",
-    "wifi-logs",
-    "embassy-net",
-] }
-esp-backtrace = { version = "*", features = [
-    "esp32",
-    "print-uart",
+    "println",
     "panic-handler",
     "exception-handler",
+    "defmt"
 ] }

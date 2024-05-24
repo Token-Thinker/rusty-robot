@@ -3,7 +3,8 @@
 #[allow(unused_imports)]
 extern crate alloc;
 
-use crate::network::sginal::*;
+//use crate::network::sginal::*;
+use crate::hardware::motor_ctrl::{MotorCommand,MOTOR_CTRL_SIGNAL};
 use crate::prelude::*;
 
 use picoserve::{

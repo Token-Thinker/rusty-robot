@@ -1,0 +1,56 @@
+{
+  "version": 1,
+  "author": "Michaël Guerrier [Tkr-App",
+  "editor": "wokwi",
+  "parts": [
+    {
+      "type": "board-esp32-devkit-c-v4",
+      "id": "esp",
+      "top": -288,
+      "left": -359.96,
+      "attrs": { "builder": "rust-nostd-esp" }
+    },
+    {
+      "type": "wokwi-led",
+      "id": "led1",
+      "top": -176.4,
+      "left": -159.4,
+      "rotate": 90,
+      "attrs": { "color": "red" }
+    },
+    {
+      "type": "wokwi-resistor",
+      "id": "r1",
+      "top": -149.65,
+      "left": -240,
+      "attrs": { "value": "1000" }
+    },
+    { "type": "wokwi-servo", "id": "servo2", "top": -309.2, "left": -192, "attrs": {} },
+    { "type": "wokwi-servo", "id": "servo1", "top": -174.8, "left": -28.8, "attrs": {} }
+  ],
+  "connections": [
+    [ "esp:TX", "$serialMonitor:RX", "", [] ],
+    [ "esp:RX", "$serialMonitor:TX", "", [] ],
+    [ "r1:1", "esp:4", "green", [ "v0" ] ],
+    [ "r1:2", "led1:A", "green", [ "v0" ] ],
+    [ "esp:5V", "servo2:V+", "red", [ "h-28.65", "v-220.8", "h163.2", "v57.6" ] ],
+    [ "esp:GND.1", "servo2:GND", "black", [ "h-57.45", "v-182.4", "h201.6", "v57.6" ] ],
+    [ "esp:12", "servo2:PWM", "green", [ "v0", "h-19.05", "v-153.6", "h134.4", "v57.6" ] ],
+    [ "esp:GND.3", "led1:C", "black", [ "h19.2", "v38.4" ] ],
+    [ "esp:5V", "servo1:V+", "red", [ "h-28.65", "v48", "h316.8", "v-67.2" ] ],
+    [
+      "esp:14",
+      "servo1:PWM",
+      "green",
+      [ "h-9.45", "v-134.4", "h115.2", "v76.8", "h422.4", "v144", "h-220.8", "v-38.4" ]
+    ],
+    [
+      "esp:GND.1",
+      "servo1:GND",
+      "black",
+      [ "h-57.45", "v-182.4", "h403.2", "v172.8", "h-48", "v19.2" ]
+    ]
+  ],
+  "serialMonitor": { "display": "terminal" },
+  "dependencies": {}
+}

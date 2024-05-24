@@ -1,4 +1,4 @@
-//! ## TKR's `Server` Module
+/*//! ## TKR's `Server` Module
 //!
 //! This "module" contains embassy async tasks for creating a
 //! server using `picoserve` crate. The intent is for the 
@@ -206,4 +206,4 @@ pub async fn connection(mut controller: WifiController<'static>) {
 #[embassy_executor::task]
 pub async fn net_task(stack: &'static Stack<WifiDevice<'static,WifiStaDevice >>) {
     stack.run().await
-}
+}*/

@@ -1,44 +1,51 @@
 #![no_std]
 #![no_main]
+#![allow(async_fn_in_trait)]
 #![feature(type_alias_impl_trait)]
 
 pub mod hardware;
 pub mod network;
 pub mod prelude;
 
-use hardware::hw::*;
-use network::server::*;
+use hardware::{servo_ctrl::*, motor_ctrl::*};
+use network::ntwk;
 #[allow(unused_imports)]
 use prelude::*;
 
-use core::mem::MaybeUninit;
+#[async_task]
+async fn motor_control_task(mut pin: impl Motor + 'static) {
+    loop {
+        pin.process_command().await.unwrap();
+        Timer::after(Duration::from_millis(10)).await;
+    }
 
-#[global_allocator]
-static ALLOCATOR: esp_alloc::EspHeap = esp_alloc::EspHeap::empty();
+}
 
-fn init_heap() {
-    const HEAP_SIZE: usize = 32 * 1024;
-    static mut HEAP: MaybeUninit<[u8; HEAP_SIZE]> = MaybeUninit::uninit();
+#[async_task]
+async fn servo_control_task(mut servos: impl PanTiltServoCtrl + 'static) {
 
-    unsafe {
-        ALLOCATOR.init(HEAP.as_mut_ptr() as *mut u8, HEAP_SIZE);
+    loop {
+        servos.process_servo_command().await.unwrap();
+        Timer::after(Duration::from_millis(10)).await;
     }
 }
 
+#[cfg(all(target_os = "none", target_arch = "xtensa", target_vendor = "unknown"))]
 #[main]
 async fn main(_spawner: Spawner) {
     init_heap();
+
     let peripherals = Peripherals::take();
     let system = peripherals.SYSTEM.split();
     let clocks = ClockControl::max(system.clock_control).freeze();
     let io = gpio::IO::new(peripherals.GPIO, peripherals.IO_MUX);
 
-    //Embassy Configurations
-    let timer_group0 = TimerGroup::new(peripherals.TIMG0, &clocks);
-    embassy::init(&clocks, timer_group0.timer0);
+    // initialize emabassy
+    let timg0 = TimerGroup::new_async(peripherals.TIMG0, &clocks);
+    embassy::init(&clocks, timg0);
 
     //Network Services Configurations
-    let timer = TimerGroup::new(peripherals.TIMG1, &clocks).timer0;
+    let timer = TimerGroup::new(peripherals.TIMG1, &clocks, None).timer0;
     let config = Config::dhcpv4(Default::default());
     let init = initialize(
         EspWifiInitFor::Wifi,
@@ -46,44 +53,70 @@ async fn main(_spawner: Spawner) {
         Rng::new(peripherals.RNG),
         system.radio_clock_control,
         &clocks,
-    )
-    .unwrap();
+    ).unwrap();
 
     let wifi = peripherals.WIFI;
-
     let (wifi_interface, controller) =
         esp_wifi::wifi::new_with_mode(&init, wifi, WifiStaDevice).unwrap();
 
-    let seed = 1234;
+    let seed = 1234; // very random, very secure seed
 
     // Init network stack
     let stack = &*make_static!(Stack::new(
         wifi_interface,
         config,
-        make_static!(StackResources::<4>::new()),
+        make_static!(StackResources::<3>::new()),
         seed
     ));
 
-    let pico_config = make_static!(picoserve::Config::new(picoserve::Timeouts {
-        start_read_request: Some(Duration::from_secs(5)),
-        read_request: Some(Duration::from_secs(1)),
-        write: Some(Duration::from_secs(5)),
-    })
-    .keep_connection_alive());
+    //initialize pins
+    let pin = io.pins.gpio4.into_push_pull_output();
+    let pan_pin = io.pins.gpio12.into_push_pull_output();
+    let tilt_pin = io.pins.gpio14.into_push_pull_output();
 
-    //Flywheel Motor Configurations
-    let led = io.pins.gpio4.into_push_pull_output();
-
-    //Servo Motors Configurations
+    //initialize ledc
     let ledc = make_static!(LEDC::new(peripherals.LEDC, make_static!(clocks)));
-    let servo_tilt = io.pins.gpio13.into_push_pull_output();
-    let servo_pan = io.pins.gpio16.into_push_pull_output();
+    ledc.set_global_slow_clock(LSGlobalClkSource::APBClk);
 
-    //Spawner Functions
-    _spawner.spawn(connection(controller)).ok();
-    _spawner.spawn(net_task(stack)).ok();
-    _spawner.spawn(server(stack, pico_config, _spawner)).ok();
+    //initialize timer
+    let lstimer1 = make_static!(ledc.get_timer::<LowSpeed>(timer::Number::Timer1));
 
-    _spawner.spawn(control_motor(led)).ok();
-    _spawner.spawn(control_servo(servo_tilt, servo_pan, ledc)).ok();
+    lstimer1
+    .configure(timer::config::Config {
+        duty: timer::config::Duty::Duty14Bit,
+        clock_source: timer::LSClockSource::APBClk,
+        frequency: 50u32.Hz(),
+    })
+    .unwrap();
+
+    //configure channel
+    let mut channel1 = ledc.get_channel(channel::Number::Channel1, pan_pin);
+    let mut channel2 = ledc.get_channel(channel::Number::Channel2, tilt_pin);
+
+    channel1
+        .configure(channel::config::Config {
+            timer: lstimer1,
+            duty_pct: 10,
+            pin_config: channel::config::PinConfig::PushPull,
+        })
+        .unwrap();
+
+    channel2
+        .configure(channel::config::Config {
+            timer: lstimer1,
+            duty_pct: 10,
+            pin_config: channel::config::PinConfig::PushPull,
+        })
+        .unwrap();
+
+    let servos = PanTiltServos::new(channel1, channel2);
+
+    //network tasks
+    _spawner.spawn(ntwk::connection(controller)).ok();
+    _spawner.spawn(ntwk::net_task(stack)).ok();
+
+    //hardware task
+    _spawner.spawn(motor_control_task(pin)).ok();
+    _spawner.spawn(servo_control_task(servos)).ok();
+
 }
