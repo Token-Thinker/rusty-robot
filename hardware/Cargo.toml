@@ -1,0 +1,51 @@
+[package]
+
+name = "tkr-hardware"
+version = "0.1.0"
+authors = [
+    "Michael Guerrier <token.thinkers@gmail.com>",
+    "Mark S. <the@wondersmith.dev>",
+]
+edition = "2021"
+license = "MIT OR Apache-2.0"
+
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+
+[features]
+
+board = []
+default = []
+
+
+[dependencies]
+
+serde = { workspace = true }
+embassy-sync = { workspace = true }
+embassy-time = { workspace = true }
+embedded-hal = { workspace = true }
+
+
+##########################################################
+#              ESP32-Specific Dependencies               #
+##########################################################
+[target.xtensa-esp32-none-elf.dependencies]
+
+tkr-hardware-board-esp32 = { path = "boards/esp32" }
+
+
+##########################################################
+#              RP2040-Specific Dependencies              #
+##########################################################
+[target.thumbv6m-none-eabi.dependencies]
+
+tkr-hardware-board-rp2040 = { path = "boards/rp2040" }
+
+
+##########################################################
+#                   Non-μC Dependencies                  #
+##########################################################
+[target.'cfg(all(not(target_os = "none"), not(target_vendor = "unknown")))']
+
+tkr-hardware-board-local = { path = "boards/local" }

@@ -1,73 +1,34 @@
-[package]
+[workspace]
 
-name = "tkr-app"
-version = "0.1.0"
-authors = ["Michael Guerrier <token.thinkers@gmail.com>"]
-edition = "2021"
-license = "MIT OR Apache-2.0"
+resolver = "2"
+members = [
+    "server",
+    "hardware",
+    "hardware/boards/esp32",
+    "hardware/boards/local",
+    "hardware/boards/rp2040",
+]
 
 
-##########################################################
-#               Core Project Dependencies                #
-##########################################################
-[dependencies]
+[workspace.dependencies]
 
-log = "^0.4.21"
-defmt = "^0.3.6"
-
-embedded-io = "^0.6.1"
+log = "^0.4"
+defmt = "^0.3"
+anyhow = "^1.0"
+rstest = "^0.21"
+itertools = "^0.13"
+once_cell = "^1.19"
+embedded-io = "^0.6"
 embedded-hal = "^1.0"
-
-embassy-time = { version = "^0.3.0", features = ["generic-queue"] }
-embassy-macros = "^0.2.1"
-embassy-futures = "^0.1.1"
-embassy-executor = "^0.5.0"
-embassy-sync = "^0.5.0"
-
-static_cell = { version = "^2.0.0", features = ["nightly"] }
-
-serde = { version = "^1.0.197", default-features = false, features = ["derive"] }
-serde_json = { version = "^1.0.114", features = ["alloc"], default-features = false }
-
-
-##########################################################
-#               Development Dependencies                 #
-##########################################################
-
-[dev-dependencies]
-##std = { features = ["std"], version = "1.x" }
-
-
-##########################################################
-#              RP2040-Specific Dependencies              #
-##########################################################
-[target.thumbv6m-none-eabi.dependencies]
-
-embassy-rp = "^0.1.0"
-
-##########################################################
-#              ESP32-Specific Dependencies               #
-##########################################################
-[target.xtensa-esp32-none-elf.dependencies]
-
-esp-println = { version = "^0.9.1", features = ["log", "esp32"] }
-esp-alloc = "^0.3.0"
-
-hal = { package = "esp-hal", version = "^0.16.0", features = [
-    "esp32",
-    "log",
-    "debug",
-    "async",
-    "embassy",
-    "vectored",
-    "embassy-time-timg0",
-    "embassy-executor-thread",
-] }
-
-esp-backtrace = { version = "^0.11.1", features = [
-    "esp32",
-    "println",
-    "panic-handler",
-    "exception-handler",
-    "defmt"
-] }
+embassy-sync = "^0.6"
+embassy-macros = "^0.2"
+embassy-futures = "^0.1"
+embassy-executor = "^0.5"
+pretty_assertions = "^1.4"
+static_cell = { version = "^2.0", features = ["nightly"] }
+embassy-time = { version = "^0.3", features = ["generic-queue"] }
+tracing-subscriber = { version = "^0.3", default-features = false }
+serde = { version = "^1", default-features = false, features = ["derive"] }
+serde_json = { version = "^1", features = ["alloc"], default-features = false }
+tracing = { version = "^0.1", default-features = false, features = ["log", "attributes"] }
+embassy-net = { version = "^0.4", features = ["proto-ipv4", "tcp", "udp", "dns", "medium-ethernet", "dhcpv4"] }

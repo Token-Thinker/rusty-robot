@@ -1,0 +1,34 @@
+##########################################################
+#                     Build Options                      #
+##########################################################
+[build]
+target = "xtensa-esp32-none-elf"
+
+
+##########################################################
+#                   "General" Settings                   #
+##########################################################
+[unstable]
+build-std = ["alloc", "core"]
+
+
+##########################################################
+#                     ESP32 Options                      #
+##########################################################
+[target.'cfg(target_arch = "xtensa")']
+
+runner    = "espflash flash --monitor"
+rustflags = [
+  # GNU LD
+  "-C", "link-arg=-Wl,-Tlinkall.x",
+  "-C", "link-arg=-nostartfiles",
+]
+
+
+[target.'cfg(target_arch = "riscv32")']
+
+runner    = "espflash flash --monitor"
+rustflags = [
+  "-C", "link-arg=-Tlinkall.x",
+  "-C", "force-frame-pointers",
+]

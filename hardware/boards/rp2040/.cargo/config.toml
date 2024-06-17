@@ -1,16 +1,8 @@
 ##########################################################
-#                 Environment Variables                  #
-##########################################################
-#[env]
-DEFMT_LOG = "debug"
-ESP_LOGLEVEL="DEBUG"
-
-
-##########################################################
 #                     Build Options                      #
 ##########################################################
 [build]
-target = "xtensa-esp32-none-elf"
+target = "thumbv6m-none-eabi"
 
 
 ##########################################################
@@ -43,23 +35,4 @@ rustflags = [
   "-C", "link-arg=-Tlink.x",
   "-C", "inline-threshold=5",
   "-C", "no-vectorize-loops",
-]
-
-
-##########################################################
-#                     ESP32 Options                      #
-##########################################################
-[target.'cfg(target_arch = "riscv32")']
-runner    = "espflash flash --monitor"
-rustflags = [
-  "-C", "link-arg=-Tlinkall.x",
-  "-C", "force-frame-pointers",
-]
-
-[target.'cfg(target_arch = "xtensa")']
-runner    = "espflash flash --monitor"
-rustflags = [
-  # GNU LD
-  "-C", "link-arg=-Wl,-Tlinkall.x",
-  "-C", "link-arg=-nostartfiles",
 ]
