@@ -59,6 +59,7 @@ impl picoserve::Timer for ServerTimer {
         embassy_time::with_timeout(duration, future).await
     }
 }
+
 static CHANNEL: Channel<CriticalSectionRawMutex, WebSocketMessage, 64> = Channel::new();
 
 pub struct WebSocket;
