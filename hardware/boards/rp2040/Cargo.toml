@@ -14,4 +14,9 @@ license = "MIT OR Apache-2.0"
 
 [dependencies]
 
+anyhow = { workspace = true }
+
+
+[target.thumbv6m-none-eabi.dependencies]
+
 embassy-rp = "^0.1.0"

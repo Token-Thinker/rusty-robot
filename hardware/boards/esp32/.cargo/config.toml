@@ -2,6 +2,7 @@
 #                     Build Options                      #
 ##########################################################
 [build]
+
 target = "xtensa-esp32-none-elf"
 
 
@@ -9,6 +10,7 @@ target = "xtensa-esp32-none-elf"
 #                   "General" Settings                   #
 ##########################################################
 [unstable]
+
 build-std = ["alloc", "core"]
 
 

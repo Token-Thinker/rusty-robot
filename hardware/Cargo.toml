@@ -18,6 +18,13 @@ license = "MIT OR Apache-2.0"
 board = []
 default = []
 
+# the features below are used internally
+# by the crate's build script, and should
+# *NOT* be used or referenced otherwise
+_esp32 = ["dep:tkr-hardware-board-esp32"]
+_local = ["dep:tkr-hardware-board-local"]
+_rp2040 = ["dep:tkr-hardware-board-rp2040"]
+
 
 [dependencies]
 
@@ -26,26 +33,11 @@ embassy-sync = { workspace = true }
 embassy-time = { workspace = true }
 embedded-hal = { workspace = true }
 
-
-##########################################################
-#              ESP32-Specific Dependencies               #
-##########################################################
-[target.xtensa-esp32-none-elf.dependencies]
-
-tkr-hardware-board-esp32 = { path = "boards/esp32" }
+tkr-hardware-board-esp32 = { path = "boards/esp32", optional = true }
+tkr-hardware-board-local = { path = "boards/local", optional = true }
+tkr-hardware-board-rp2040 = { path = "boards/rp2040", optional = true }
 
 
-##########################################################
-#              RP2040-Specific Dependencies              #
-##########################################################
-[target.thumbv6m-none-eabi.dependencies]
+[build-dependencies]
 
-tkr-hardware-board-rp2040 = { path = "boards/rp2040" }
-
-
-##########################################################
-#                   Non-μC Dependencies                  #
-##########################################################
-[target.'cfg(all(not(target_os = "none"), not(target_vendor = "unknown")))']
-
-tkr-hardware-board-local = { path = "boards/local" }
+anyhow = { workspace = true }

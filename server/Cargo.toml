@@ -15,9 +15,8 @@ license = "MIT OR Apache-2.0"
 
 [features]
 
-esp32 = []
-rp2040 = []
 default = []
+board = ["hardware/board"]
 
 
 [dependencies]
@@ -28,5 +27,5 @@ static_cell = { workspace = true }
 embassy-sync = { workspace = true }
 embassy-time = { workspace = true }
 embassy-executor = { workspace = true }
-hardware = { package = "tkr-hardware", path = "../hardware" }
 picoserve = { version = "^0.11", features = ["embassy"] }
+hardware = { package = "tkr-hardware", path = "../hardware", default-features = false }

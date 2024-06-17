@@ -2,6 +2,7 @@
 #                     Build Options                      #
 ##########################################################
 [build]
+
 target = "thumbv6m-none-eabi"
 
 
@@ -9,6 +10,7 @@ target = "thumbv6m-none-eabi"
 #                   "General" Settings                   #
 ##########################################################
 [unstable]
+
 build-std = ["alloc", "core"]
 
 
@@ -16,6 +18,7 @@ build-std = ["alloc", "core"]
 #                     RP2040 Options                     #
 ##########################################################
 [target.thumbv6m-none-eabi]
+
 runner = "elf2uf2-rs -d"
 
 # Pass some extra options to rustc, some of which get passed on to the linker.
