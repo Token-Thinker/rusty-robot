@@ -17,11 +17,55 @@ license = "MIT OR Apache-2.0"
 
 default = []
 board = ["hardware/board"]
+dev-server = [
+    "log",
+    "nix",
+    "clap",
+    "futures",
+    "heapless",
+    "async-io",
+    "rand_core",
+    "env_logger",
+    "embassy-net-ppp",
+    "embassy-net/dns",
+    "embassy-net/log",
+    "embassy-net/std",
+    "embassy-net/tcp",
+    "embassy-net/udp",
+    "critical-section",
+    "embassy-sync/log",
+    "embassy-time/log",
+    "embassy-time/std",
+    "embedded-io-async",
+    "embassy-net/dhcpv4",
+    "embassy-net-tuntap",
+    "embedded-io-adapters",
+    "embassy-executor/log",
+    "embassy-net/medium-ip",
+    "embassy-net/proto-ipv6",
+    "tracing-subscriber/fmt",
+    "tracing-subscriber/std",
+    "embassy-executor/arch-std",
+    "embassy-net/medium-ethernet",
+    "tracing-subscriber/registry",
+    "embassy-executor/executor-thread",
+    "embassy-executor/integrated-timers",
+    "embassy-executor/task-arena-size-32768",
+]
+
+
+[[example]]
+
+name = "dev-server"
+crate-type = ["bin"]
+required-features = ["dev-server"]
 
 
 [dependencies]
 
+serde = { workspace = true }
 tracing = { workspace = true }
+serde_json = { workspace = true }
 embassy-net = { workspace = true }
 static_cell = { workspace = true }
 embassy-sync = { workspace = true }
@@ -29,3 +73,19 @@ embassy-time = { workspace = true }
 embassy-executor = { workspace = true }
 picoserve = { version = "^0.11", features = ["embassy"] }
 hardware = { package = "tkr-hardware", path = "../hardware", default-features = false }
+
+# Optional deps
+log = { workspace = true, optional = true }
+nix = { version = "^0.26", optional = true }
+futures = { version = "^0.3", optional = true }
+async-io = { version = "^1.6", optional = true }
+env_logger = { version = "^0.9", optional = true }
+embedded-io-async = { version = "^0.6", optional = true }
+embassy-net-tuntap = { version = "^0.1", optional = true }
+tracing-subscriber = { workspace = true, optional = true }
+clap = { version = "3", features = ["derive"], optional = true }
+rand_core = { version = "^0.6", features = ["std"], optional = true }
+heapless = { version = "^0.8", default-features = false, optional = true }
+embassy-net-ppp = { version = "^0.1", features = ["log"], optional = true }
+critical-section = { version = "^1.1", features = ["std"], optional = true }
+embedded-io-adapters = { version = "^0.6", features = ["futures-03"], optional = true }
