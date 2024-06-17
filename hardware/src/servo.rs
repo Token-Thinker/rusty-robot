@@ -27,7 +27,7 @@ pub use embedded_hal::pwm::SetDutyCycle as PwmPin;
 /// Servo Command
 ///
 /// TODO(token-thinker): documentation
-#[derive(fmt::Debug)]
+#[derive(Copy, Clone, fmt::Debug, serde::Serialize, serde::Deserialize)]
 pub enum ServoCommand {
     Pan(i32),
     Tilt(i32),

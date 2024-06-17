@@ -27,7 +27,7 @@ use embedded_hal::digital::OutputPin;
 /// Motor Command
 ///
 /// TODO(mguerrier): documentation
-#[derive(fmt::Debug, serde::Serialize, serde::Deserialize)]
+#[derive(Copy, Clone, fmt::Debug, serde::Serialize, serde::Deserialize)]
 pub enum MotorCommand {
     On,
     Off,
