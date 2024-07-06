@@ -49,7 +49,6 @@ dev-server = [
     "embassy-net/medium-ethernet",
     "tracing-subscriber/registry",
     "embassy-executor/executor-thread",
-    "embassy-executor/integrated-timers",
     "embassy-executor/task-arena-size-32768",
 ]
 
@@ -74,6 +73,7 @@ embassy-executor = { workspace = true }
 picoserve = { version = "^0.11", features = ["embassy"] }
 hardware = { package = "tkr-hardware", path = "../hardware", default-features = false }
 
+
 # Optional deps
 log = { workspace = true, optional = true }
 nix = { version = "^0.26", optional = true }
@@ -89,3 +89,6 @@ heapless = { version = "^0.8", default-features = false, optional = true }
 embassy-net-ppp = { version = "^0.1", features = ["log"], optional = true }
 critical-section = { version = "^1.1", features = ["std"], optional = true }
 embedded-io-adapters = { version = "^0.6", features = ["futures-03"], optional = true }
+
+[dev-dependencies]
+server = {package = "tkr-server", path = "../server", default-features = false}

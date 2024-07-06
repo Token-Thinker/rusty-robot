@@ -22,8 +22,17 @@ pub async fn run<Driver: NetworkDriver>(
     id: usize,
     port: u16,
     stack: &'static Stack<Driver>,
-    config: &'static picoserve::Config<Duration>,
-) -> ! {
+    config: Option<&'static picoserve::Config<Duration>>,
+) -> !
+{
+    let default_config = picoserve::Config::new(picoserve::Timeouts {
+        start_read_request: Some(Duration::from_secs(5)),
+        read_request: Some(Duration::from_secs(1)),
+        write: Some(Duration::from_secs(5)),
+    });
+
+    let config = config.unwrap_or(&default_config);
+
     let router = Router::new().route(
         "/ws",
         picoserve::routing::get(|upgrade: WebSocketUpgrade| upgrade.on_upgrade(WebSocket)),

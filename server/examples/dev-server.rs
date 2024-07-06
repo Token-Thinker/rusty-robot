@@ -8,6 +8,7 @@ use heapless::Vec;
 use log::*;
 use rand_core::{OsRng, RngCore};
 use static_cell::StaticCell;
+use tkr_server::{run as test_run};
 
 #[derive(Parser)]
 #[clap(version = "1.0")]
@@ -62,28 +63,15 @@ async fn main_task(spawner: Spawner) {
     // Launch network task
     spawner.spawn(net_task(stack)).unwrap();
 
-    // Then we can use it!
-    let mut rx_buffer = [0; 4096];
-    let mut tx_buffer = [0; 4096];
-    let mut socket = TcpSocket::new(stack, &mut rx_buffer, &mut tx_buffer);
+    info!("Starting WebSocket server on port 8000");
 
-    socket.set_timeout(Some(Duration::from_secs(10)));
-
-    let remote_endpoint = (Ipv4Address::new(192, 168, 69, 100), 8000);
-    info!("connecting to {:?}...", remote_endpoint);
-    let r = socket.connect(remote_endpoint).await;
-    if let Err(e) = r {
-        warn!("connect error: {:?}", e);
-        return;
-    }
-    info!("connected!");
-    loop {
-        let r = socket.write_all(b"Hello!\n").await;
-        if let Err(e) = r {
-            warn!("write error: {:?}", e);
-            return;
-        }
-    }
+    // Run the WebSocket server
+    test_run(
+        0,        // ID for the WebSocket server instance
+        8000,     // Port number
+        stack,
+        None
+    ).await;
 }
 
 static EXECUTOR: StaticCell<Executor> = StaticCell::new();

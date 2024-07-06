@@ -4,20 +4,6 @@
 //! configurable launch sequences to any type that implements
 //! [OutputPin](embedded_hal::digital::OutputPin).
 //!
-//! ### Example Usage
-//! ```rust
-//! # use tkr_hardware::{Motor, MotorCommand};
-//! # use embassy_time::{Timer, Duration};
-//!
-//! async fn motor_control_task(&mut pin: impl Motor) {
-//!     loop {
-//!         pin.process(MotorCommand::Launch).await.map_err(|error| todo!())?;
-//!
-//!         // Adjust polling interval as needed
-//!         Timer::after(Duration::from_millis(10)).await;
-//!     }
-//! }
-//! ```
 
 use core::fmt;
 
@@ -26,7 +12,13 @@ use embedded_hal::digital::OutputPin;
 
 /// Motor Command
 ///
-/// TODO(mguerrier): documentation
+/// Variants:
+/// - `On`: Turn the motor on.
+///   - Ex: `{ "Motor": "On" }`
+/// - `Off`: Turn the motor off.
+///   - Ex: `{ "Motor": "Off" }`
+/// - `Launch`: Launch the motor with a predefined sequence.
+///   - Ex: `{ "Motor": "Launch" }`
 #[derive(Copy, Clone, fmt::Debug, serde::Serialize, serde::Deserialize)]
 pub enum MotorCommand {
     On,

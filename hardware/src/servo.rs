@@ -1,43 +1,46 @@
 //! ## Servo Control Module
 //!
-//! Adds servo control functionality to any type that implements
-//! [OutputPin](embedded_hal::digital::OutputPin), including precise
-//! positioning of servos (pan and tilt functionality), automatic
-//! angle conversion, and basic command processing.
+//! Facilitates precise positioning of servos through angle conversion and command processing,
+//! supporting pan and tilt functionalities for [PwmPin](embedded_hal::pwm::SetDutyCycle as PwmPin;)
 //!
-//! ### Example Usage
-//! ```rust
-//! # use tkr_hardware::{Servo, ServoCommand};
-//! # use embassy_time::{Timer, Duration};
-//!
-//! async fn servo_control_task(&mut pin: impl Servo) {
-//!     loop {
-//!         pin.process(ServoCommand::PanTilt(10, 10)).await.map_err(|error| todo!())?;
-//!
-//!         // Adjust polling interval as needed
-//!         Timer::after(Duration::from_millis(10)).await;
-//!     }
-//! }
-//! ```
-
 use core::fmt;
 
 pub use embedded_hal::pwm::SetDutyCycle as PwmPin;
 
 /// Servo Command
 ///
-/// TODO(token-thinker): documentation
+/// Variants:
+/// - `Pan(u8)`: Pan the servo to a specific angle.
+///     - Ex: `{ "Servo": { "Pan": 30 } }`
+/// - `Tilt(u8)`: Tilt the servo to a specific angle.
+///     - Ex: `{ "Servo": { "Tilt": 45 } }`
+/// - `Rest(bool)`: Set the servo to a resting state (true for rest, false for active).
+///     - Ex: `{ "Servo": { "Rest": true } }`
+/// - `PanTilt(u8, u8)`: Simultaneously pan and tilt the servo to specified angles.
+///     - Ex: `{ "Servo": { "PanTilt": [30, 45] } }`
 #[derive(Copy, Clone, fmt::Debug, serde::Serialize, serde::Deserialize)]
 pub enum ServoCommand {
-    Pan(i32),
-    Tilt(i32),
+    Pan(u8),
+    Tilt(u8),
     Rest(bool),
-    PanTilt(i32, i32),
+    PanTilt(u8, u8),
 }
 
 /// Servo Pair
 ///
-/// TODO(mguerrier): documentation
+/// A pair of servo motors for pan and tilt control.
+///
+/// This struct encapsulates two servos: one for panning and one for tilting.
+/// It is designed to control two axes of motion, typically for camera or sensor stabilization.
+///
+/// # Type Parameters
+/// - `Pan`: The PWM pin type used to control the pan servo.
+/// - `Tilt`: The PWM pin type used to control the tilt servo.
+///
+/// # Fields
+/// - `pan`: The servo motor responsible for panning.
+/// - `tilt`: The servo motor responsible for tilting.
+///
 pub struct ServoPair<Pan: PwmPin, Tilt: PwmPin> {
     pan: Pan,
     tilt: Tilt,
@@ -56,6 +59,9 @@ pub trait Servo {
     /// Move the servo pair to the specified coordinates
     fn move_to(&mut self, x: u16, y: u16) -> Result<(), Self::Error>;
 
+    /// Helper function to convert angle (0 to 180) to pwm signal based on 14bit
+    fn pwm_value(angle: u8) -> u16 {409 * ((2048-409) / 180 * u16::from(angle))}
+
     /// Process websocket commands
     fn process(&mut self, command: ServoCommand) -> Result<(), Self::Error>;
 }
@@ -65,11 +71,10 @@ impl<PwmError: fmt::Debug, Pan: PwmPin<Error = PwmError>, Tilt: PwmPin<Error = P
 {
     type Error = PwmError;
 
-    fn move_to(&mut self, x: u16, y: u16) -> Result<(), Self::Error> {
-        // TODO(mguerrier): double check that this behaves as expected in the real world
+    fn move_to(&mut self, duty_x: u16, duty_y: u16) -> Result<(), Self::Error> {
         match (
-            self.pan.set_duty_cycle_fraction(x, 180),
-            self.tilt.set_duty_cycle_fraction(y, 180),
+            self.pan.set_duty_cycle(duty_x),
+            self.tilt.set_duty_cycle(duty_y),
         ) {
             (Ok(()), Ok(())) => Ok(()),
             (Err(error), Ok(())) | (Ok(()), Err(error)) => Err(error),
@@ -85,7 +90,7 @@ impl<PwmError: fmt::Debug, Pan: PwmPin<Error = PwmError>, Tilt: PwmPin<Error = P
             ServoCommand::Rest(_) => todo!(),
             ServoCommand::Pan(_value) => todo!(),
             ServoCommand::Tilt(_value) => todo!(),
-            ServoCommand::PanTilt(x, y) => self.move_to(x as u16, y as u16),
+            ServoCommand::PanTilt(x, y) => self.move_to(Self::pwm_value(x), Self::pwm_value(y)),
         }
     }
 }
