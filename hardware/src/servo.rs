@@ -53,16 +53,63 @@ impl<Pan: PwmPin, Tilt: PwmPin> ServoPair<Pan, Tilt> {
     }
 }
 
+/// Servo Trait
+///
+/// This trait defines the fundamental operations that a servo should support.
+/// It includes methods to move the servo to specified coordinates, convert
+/// an angle to a PWM signal, and process commands received via WebSocket.
+///
+/// The `Servo` trait is designed to be implemented for various types of servos,
+/// allowing for flexibility and extensibility in servo control implementations.
 pub trait Servo {
     type Error: fmt::Debug;
 
     /// Move the servo pair to the specified coordinates
+    ///
+    /// This method is responsible for moving the servo to the given x and y coordinates.
+    /// Implementations should ensure that the servo moves smoothly and accurately
+    /// to the specified position.
+    ///
+    /// # Parameters
+    ///
+    /// * `x` - The x-coordinate to move the servo to.
+    /// * `y` - The y-coordinate to move the servo to.
+    ///
+    /// # Returns
+    ///
+    /// * `Result<(), Self::Error>` - Returns `Ok(())` if the servo successfully moves to the
+    /// specified coordinates, or an error of type `Self::Error` if the operation fails.
     fn move_to(&mut self, x: u16, y: u16) -> Result<(), Self::Error>;
 
-    /// Helper function to convert angle (0 to 180) to pwm signal based on 14bit
-    fn pwm_value(angle: u8) -> u16 {409 * ((2048-409) / 180 * u16::from(angle))}
+    /// Helper function to convert angle (0 to 180) to PWM signal based on 14-bit resolution
+    ///
+    /// This function converts an angle in the range of 0 to 180 degrees to a corresponding
+    /// PWM signal value. The conversion is based on a 14-bit resolution.
+    ///
+    /// # Parameters
+    ///
+    /// * `angle` - The angle in degrees to be converted to a PWM signal.
+    ///
+    /// # Returns
+    ///
+    /// * `u16` - The PWM signal value corresponding to the given angle.
+    fn pwm_value(angle: u8) -> u16 {
+        409 * ((2048 - 409) / 180 * u16::from(angle))
+    }
 
-    /// Process websocket commands
+    /// Process Commands
+    ///
+    /// This method processes commands sent to the servo. The `ServoCommand`
+    /// parameter represents the specific command to be executed.
+    ///
+    /// # Parameters
+    ///
+    /// * `command` - A `ServoCommand` instance representing the command to be processed.
+    ///
+    /// # Returns
+    ///
+    /// * `Result<(), Self::Error>` - Returns `Ok(())` if the command is successfully processed,
+    /// or an error of type `Self::Error` if the operation fails.
     fn process(&mut self, command: ServoCommand) -> Result<(), Self::Error>;
 }
 
