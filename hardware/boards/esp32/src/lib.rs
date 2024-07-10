@@ -25,14 +25,19 @@ mod esp32_xtensa {
 
     use core::mem::MaybeUninit;
     use esp_wifi::wifi::WifiController;
+    use hal::gpio::OutputPin;
+    use hal::ledc::timer::TimerSpeed;
     use seq_macro::seq;
     pub struct ESP32Initializer<'t> {
         wifi_interface: WifiDevice<'t, WifiStaDevice>,
         controller: WifiController<'t>,
         flywheels: AnyOutput<'t>,
-        loader: AnyOutput<'t>
+        loader: AnyOutput<'t>,
+        pchannel: channel::Channel<'t, dyn TimerSpeed<ClockSourceType=()>, dyn OutputPin>,
+        tchannel: channel::Channel<'t, dyn TimerSpeed<ClockSourceType=()>, dyn OutputPin>,
         //TODO(mguerrier): store results [pchannel, tchannel]
         //TODO(the-wondersmith): assist that guy ^
+
     }
 
     impl ESP32Initializer {
@@ -123,8 +128,8 @@ mod esp32_xtensa {
                 controller,
                 flywheels,
                 loader,
-                //pchannel,
-                //tchannel,
+                pchannel,
+                tchannel,
             };
         }
     }
