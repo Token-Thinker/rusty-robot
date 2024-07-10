@@ -16,6 +16,7 @@ license = "MIT OR Apache-2.0"
 [dependencies]
 
 anyhow = { workspace = true }
+seq-macro = "0.3.5"
 
 
 [target.'cfg(target_arch = "xtensa")'.dependencies]

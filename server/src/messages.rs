@@ -49,11 +49,7 @@ pub async fn command_router() {
                 tracing::info!("Received Servo Command: {:?}", command);
             }
             WebSocketMessage::MotorAndServo { motor, servo } => {
-                tracing::info!(
-                    "Received Motor Command: {:?} and Servo Command: {:?}",
-                    motor,
-                    servo
-                );
+                tracing::info!("Received Motor Command: {:?} and Servo Command: {:?}",motor,servo);
             }
         }
     }

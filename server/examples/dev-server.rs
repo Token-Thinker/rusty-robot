@@ -1,14 +1,12 @@
 use clap::Parser;
 use embassy_executor::{Executor, Spawner};
-use embassy_net::{tcp::TcpSocket, Config, Ipv4Address, Ipv4Cidr, Stack, StackResources};
+use embassy_net::{Config, Ipv4Address, Ipv4Cidr, Stack, StackResources};
 use embassy_net_tuntap::TunTapDevice;
-use embassy_time::Duration;
-use embedded_io_async::Write;
 use heapless::Vec;
 use log::*;
 use rand_core::{OsRng, RngCore};
 use static_cell::StaticCell;
-use tkr_server::{run as test_run};
+use tkr_server::{messages::command_router,server::{run as websocket_server}};
 
 #[derive(Parser)]
 #[clap(version = "1.0")]
@@ -66,12 +64,13 @@ async fn main_task(spawner: Spawner) {
     info!("Starting WebSocket server on port 8000");
 
     // Run the WebSocket server
-    test_run(
+    websocket_server(
         0,        // ID for the WebSocket server instance
         8000,     // Port number
         stack,
         None
     ).await;
+
 }
 
 static EXECUTOR: StaticCell<Executor> = StaticCell::new();
@@ -87,5 +86,6 @@ fn main() {
 
     executor.run(|spawner| {
         spawner.spawn(main_task(spawner)).unwrap();
+        spawner.spawn(command_router()).unwrap();
     });
 }
