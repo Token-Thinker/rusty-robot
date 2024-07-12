@@ -18,9 +18,6 @@ license = "MIT OR Apache-2.0"
 anyhow = { workspace = true }
 seq-macro = "0.3.5"
 
-
-[target.'cfg(target_arch = "xtensa")'.dependencies]
-
 esp-alloc = "0.4.0"
 esp-wifi = { version = "0.6.0", features = [
     "esp32",

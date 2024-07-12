@@ -2,45 +2,42 @@
 #![allow(unused_qualifications)]
 #![feature(type_alias_impl_trait)]
 
-#[cfg(target_arch = "xtensa")]
-mod esp32_xtensa {
-    extern crate alloc;
 
-    use esp_alloc::EspHeap;
-    use hal::{
+extern crate alloc;
+
+use esp_alloc::EspHeap;
+use hal::{
         clock::ClockControl,
-        gpio::{AnyOutput, GpioPin, Io, Level},
-        ledc::{{channel::{self, ChannelIFace}}, {timer::{self, TimerIFace}}, Ledc, LSGlobalClkSource, LowSpeed},
+        gpio::{AnyOutput, GpioPin, Io, Level, OutputPin},
+        ledc::{{channel::{self, ChannelIFace}}, {timer::{self, TimerIFace, TimerSpeed}}, Ledc, LSGlobalClkSource, LowSpeed},
         peripherals::Peripherals,
         rng::Rng,
         timer::timg::TimerGroup,
         system::SystemControl,
         prelude::_fugit_RateExtU32,
     };
-    use esp_wifi::{
+use esp_wifi::{
         initialize,
         EspWifiInitFor,
-        wifi::{WifiStaDevice, WifiDevice},
+        wifi::{WifiStaDevice, WifiDevice, WifiController},
     };
 
-    use core::mem::MaybeUninit;
-    use esp_wifi::wifi::WifiController;
-    use hal::gpio::OutputPin;
-    use hal::ledc::timer::TimerSpeed;
-    use seq_macro::seq;
-    pub struct ESP32Initializer<'t> {
-        wifi_interface: WifiDevice<'t, WifiStaDevice>,
-        controller: WifiController<'t>,
-        flywheels: AnyOutput<'t>,
-        loader: AnyOutput<'t>,
-        pchannel: channel::Channel<'t, dyn TimerSpeed<ClockSourceType=()>, dyn OutputPin>,
-        tchannel: channel::Channel<'t, dyn TimerSpeed<ClockSourceType=()>, dyn OutputPin>,
-        //TODO(mguerrier): store results [pchannel, tchannel]
-        //TODO(the-wondersmith): assist that guy ^
+use core::mem::MaybeUninit;
+use esp_wifi::wifi::WifiDeviceMode;
+use seq_macro::seq;
+use esp_backtrace as _;
+
+
+pub struct Board {
+        pub wifi_interface: WifiDevice<'static, WifiStaDevice>,
+        pub flywheels: AnyOutput<'static>,
+        pub loader: AnyOutput<'static>,
+        pub pan: channel,
+        pub tilt: channel,
 
     }
 
-    impl ESP32Initializer {
+impl Board {
         #[global_allocator]
         fn heap() {
             static ALLOCATOR: EspHeap = EspHeap::empty();
@@ -52,7 +49,7 @@ mod esp32_xtensa {
             }
         }
 
-        seq!(P in 0..=20 {
+/*        seq!(P in 0..=20 {
             fn get_gpio_pin<const P: u8>(io: &mut Io, pin: u8) -> Option<GpioPin<P>> {
                 match pin {
                     #(P => Some(io.pins.gpioP()),)*
@@ -60,8 +57,8 @@ mod esp32_xtensa {
                 }
             }
         });
-
-        fn init(&self, flywheels: u8, pan: u8, tilt: u8, loader: u8 ) {
+*/
+        pub fn init(&self) -> Board {
             Self::heap();
 
             let peripherals = Peripherals::take();
@@ -83,10 +80,15 @@ mod esp32_xtensa {
                 esp_wifi::wifi::new_with_mode(&init, wifi, WifiStaDevice).unwrap();
 
             // initialize pins
-            let flywheels =  AnyOutput::new(Self::get_gpio_pin(&mut io, flywheels), Level::Low);
+/*            let flywheels =  AnyOutput::new(Self::get_gpio_pin(&mut io, flywheels), Level::Low);
             let loader =  AnyOutput::new(Self::get_gpio_pin(&mut io, loader), Level::Low);
             let pan = Self::get_gpio_pin(&mut io, pan);
-            let tilt = Self::get_gpio_pin(&mut io, tilt);
+            let tilt = Self::get_gpio_pin(&mut io, tilt);*/
+
+            let flywheels= AnyOutput::new(io.pins.gpio4, Level::Low);
+            let loader= AnyOutput::new(io.pins.gpio5, Level::Low);
+            let pan = io.pins.gpio10;
+            let tilt = io.pins.gpio11;
 
             // initialize ledc
             let mut ledc = Ledc::new(peripherals.LEDC, &(clocks));
@@ -123,14 +125,12 @@ mod esp32_xtensa {
                 })
                 .unwrap();
 
-            ESP32Initializer{
+            Board {
                 wifi_interface,
-                controller,
                 flywheels,
                 loader,
-                pchannel,
-                tchannel,
-            };
+                pan: (pchannel),
+                tilt: (tchannel),
+            }
         }
     }
-}
