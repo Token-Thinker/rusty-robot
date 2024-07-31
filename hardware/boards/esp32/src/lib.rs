@@ -6,11 +6,11 @@
 extern crate alloc;
 
 use core::mem::MaybeUninit;
+use static_cell::make_static;
 
-use esp_alloc::EspHeap;
 use hal::{
     clock::ClockControl,
-    gpio::{AnyOutput, GpioPin, Io, Level, OutputPin},
+    gpio::{AnyOutput, GpioPin, Io, Level},
     ledc::{{channel::{self, ChannelIFace}}, {timer::{self, TimerIFace}}, Ledc, LSGlobalClkSource, LowSpeed},
     peripherals::Peripherals,
     rng::Rng,
@@ -23,8 +23,25 @@ use esp_wifi::{
     EspWifiInitFor,
     wifi::{WifiStaDevice, WifiDevice, WifiController},
 };
+use hal::timer::{ErasedTimer, PeriodicTimer};
 
-use seq_macro::seq;
+
+#[global_allocator]
+static ALLOCATOR: esp_alloc::EspHeap = esp_alloc::EspHeap::empty();
+
+fn init_heap() {
+    const HEAP_SIZE: usize = 32 * 1024;
+    static mut HEAP: MaybeUninit<[u8; HEAP_SIZE]> = MaybeUninit::uninit();
+
+    unsafe {
+        ALLOCATOR.init(HEAP.as_mut_ptr() as *mut u8, HEAP_SIZE);
+    }
+}
+
+#[panic_handler]
+pub fn panic(_info: &core::panic::PanicInfo) -> ! {
+    loop {}
+}
 
 
 pub struct Board {
@@ -32,40 +49,24 @@ pub struct Board {
     pub wifi_controller: Option<WifiController<'static>>,
     pub flywheels: AnyOutput<'static>,
     pub loader: AnyOutput<'static>,
-    pub pan: channel,
-    pub tilt: channel,
+    pub pan: hal::ledc::channel::Channel<'static, LowSpeed, GpioPin<10>>,
+    pub tilt: hal::ledc::channel::Channel<'static, LowSpeed, GpioPin<11>>,
 }
 
 impl Board {
-    #[global_allocator]
-    fn heap() {
-        static ALLOCATOR: EspHeap = EspHeap::empty();
-        const HEAP_SIZE: usize = 32 * 1024;
-        static mut HEAP: MaybeUninit<[u8; HEAP_SIZE]> = MaybeUninit::uninit();
-        unsafe {
-            ALLOCATOR.init(HEAP.as_mut_ptr() as *mut u8, HEAP_SIZE);
-        }
-    }
-
-    /*        seq!(P in 0..=20 {
-                fn get_gpio_pin<const P: u8>(io: &mut Io, pin: u8) -> Option<GpioPin<P>> {
-                    match pin {
-                        #(P => Some(io.pins.gpioP()),)*
-                        _ => None,
-                    }
-                }
-            });
-    */
     pub fn init(&self) -> Board {
-        Self::heap();
+        init_heap();
 
         let peripherals = Peripherals::take();
         let system = SystemControl::new(peripherals.SYSTEM);
         let clocks = ClockControl::max(system.clock_control).freeze();
-        let mut io = Io::new(peripherals.GPIO, peripherals.IO_MUX);
+        let io = Io::new(peripherals.GPIO, peripherals.IO_MUX);
+
+        let timg0 = TimerGroup::new(peripherals.TIMG0, &clocks, None);
+        let timer0: ErasedTimer = timg0.timer0.into();
+        let timer = PeriodicTimer::new(timer0);
 
         // Network Services Configurations
-        let timer = TimerGroup::new(peripherals.TIMG1, &clocks, None).timer0;
         let init = initialize(
             EspWifiInitFor::Wifi,
             timer,
@@ -77,11 +78,6 @@ impl Board {
         let (wifi_driver, wifi_controller) =
             esp_wifi::wifi::new_with_mode(&init, wifi, WifiStaDevice).unwrap();
 
-        // initialize pins
-        /*            let flywheels =  AnyOutput::new(Self::get_gpio_pin(&mut io, flywheels), Level::Low);
-                    let loader =  AnyOutput::new(Self::get_gpio_pin(&mut io, loader), Level::Low);
-                    let pan = Self::get_gpio_pin(&mut io, pan);
-                    let tilt = Self::get_gpio_pin(&mut io, tilt);*/
 
         let flywheels = AnyOutput::new(io.pins.gpio4, Level::Low);
         let loader = AnyOutput::new(io.pins.gpio5, Level::Low);
@@ -89,11 +85,11 @@ impl Board {
         let tilt = io.pins.gpio11;
 
         // initialize ledc
-        let mut ledc = Ledc::new(peripherals.LEDC, &(clocks));
+        let ledc = make_static!(Ledc::new(peripherals.LEDC, make_static!(clocks)));
         ledc.set_global_slow_clock(LSGlobalClkSource::APBClk);
 
         // initialize timer
-        let mut lstimer1 = ledc.get_timer::<LowSpeed>(timer::Number::Timer1);
+        let lstimer1 = make_static!(ledc.get_timer::<LowSpeed>(timer::Number::Timer1));
 
         lstimer1
             .configure(timer::config::Config {
@@ -109,7 +105,7 @@ impl Board {
 
         pchannel
             .configure(channel::config::Config {
-                timer: &lstimer1,
+                timer: lstimer1,
                 duty_pct: 10,
                 pin_config: channel::config::PinConfig::PushPull,
             })
@@ -117,7 +113,7 @@ impl Board {
 
         tchannel
             .configure(channel::config::Config {
-                timer: &lstimer1,
+                timer: lstimer1,
                 duty_pct: 10,
                 pin_config: channel::config::PinConfig::PushPull,
             })
