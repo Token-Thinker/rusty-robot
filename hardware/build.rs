@@ -1,7 +1,7 @@
 use anyhow::Context;
 
 #[derive(Eq, Debug, PartialEq)]
-enum TargetBoard {
+enum TargetMCU {
     Esp32,
     Local,
     Rp2040,
@@ -22,7 +22,7 @@ trait EnvVarValue: AsRef<str> {
     }
 }
 
-impl core::fmt::Display for TargetBoard {
+impl core::fmt::Display for TargetMCU {
     fn fmt(&self, formatter: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
             Self::Esp32 => {
@@ -38,7 +38,7 @@ impl core::fmt::Display for TargetBoard {
     }
 }
 
-impl TargetBoard {
+impl TargetMCU {
     fn from_env() -> anyhow::Result<Self> {
         match (
             std::env::var("CARGO_CFG_TARGET_OS")
@@ -55,7 +55,7 @@ impl TargetBoard {
             ("none", "xtensa", "unknown") => Ok(Self::Esp32),
             (os, _, vendor) if (os != "none") && (vendor != "unknown") => Ok(Self::Local),
             (os, arch, vendor) => Err(anyhow::Error::msg(format!(
-                "unknown target board triple: {}-{}-{}",
+                "unknown target mcu triple: {}-{}-{}",
                 arch, vendor, os
             ))),
         }
@@ -63,8 +63,8 @@ impl TargetBoard {
 }
 
 pub fn main() -> anyhow::Result<()> {
-    if "CARGO_FEATURE_BOARD".env_var_value() {
-        println!(r#"cargo:rustc-cfg=feature="{}""#, TargetBoard::from_env()?);
+    if "CARGO_FEATURE_MCU".env_var_value() {
+        println!(r#"cargo:rustc-cfg=feature="{}""#, TargetMCU::from_env()?);
     }
 
     Ok(())

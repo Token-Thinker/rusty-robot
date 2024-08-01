@@ -4,9 +4,9 @@ resolver = "2"
 members = [
     "server",
     "hardware",
-    "hardware/boards/esp32",
-    "hardware/boards/local",
-    "hardware/boards/rp2040",
+    "hardware/mcu/esp32",
+    "hardware/mcu/local",
+    "hardware/mcu/rp2040",
 ]
 
 

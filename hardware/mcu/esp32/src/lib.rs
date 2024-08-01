@@ -44,7 +44,7 @@ pub fn panic(_info: &core::panic::PanicInfo) -> ! {
 }
 
 
-pub struct Board {
+pub struct MCU {
     pub wifi_driver: WifiDevice<'static, WifiStaDevice>,
     pub wifi_controller: Option<WifiController<'static>>,
     pub flywheels: AnyOutput<'static>,
@@ -53,8 +53,8 @@ pub struct Board {
     pub tilt: hal::ledc::channel::Channel<'static, LowSpeed, GpioPin<11>>,
 }
 
-impl Board {
-    pub fn init(&self) -> Board {
+impl MCU {
+    pub fn init() -> MCU {
         init_heap();
 
         let peripherals = Peripherals::take();
@@ -119,7 +119,7 @@ impl Board {
             })
             .unwrap();
 
-        Board {
+        MCU {
             wifi_driver,
             wifi_controller: Option::from(wifi_controller),
             flywheels,

@@ -1,6 +1,6 @@
 [package]
 
-name = "tkr-hardware-board-local"
+name = "tkr-hardware-mcu-local"
 version = "0.1.0"
 authors = [
     "Michael Guerrier <token.thinkers@gmail.com>",

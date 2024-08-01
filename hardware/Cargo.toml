@@ -15,15 +15,15 @@ license = "MIT OR Apache-2.0"
 
 [features]
 
-board = []
+mcu = []
 default = []
 
 # the features below are used internally
 # by the crate's build script, and should
 # *NOT* be used or referenced otherwise
-_esp32 = ["dep:tkr-hardware-board-esp32"]
-_local = ["dep:tkr-hardware-board-local"]
-_rp2040 = ["dep:tkr-hardware-board-rp2040"]
+_esp32 = ["dep:tkr-hardware-mcu-esp32"]
+_local = ["dep:tkr-hardware-mcu-local"]
+_rp2040 = ["dep:tkr-hardware-mcu-rp2040"]
 
 
 [dependencies]
@@ -32,10 +32,11 @@ serde = { workspace = true }
 embassy-sync = { workspace = true }
 embassy-time = { workspace = true }
 embedded-hal = { workspace = true }
+embassy-net = {workspace = true}
 
-tkr-hardware-board-esp32 = { path = "boards/esp32", optional = true }
-tkr-hardware-board-local = { path = "boards/local", optional = true }
-tkr-hardware-board-rp2040 = { path = "boards/rp2040", optional = true }
+tkr-hardware-mcu-esp32 = { path = "mcu/esp32", optional = true }
+tkr-hardware-mcu-local = { path = "mcu/local", optional = true }
+tkr-hardware-mcu-rp2040 = { path = "mcu/rp2040", optional = true }
 
 
 [build-dependencies]

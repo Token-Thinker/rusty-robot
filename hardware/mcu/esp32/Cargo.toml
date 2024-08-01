@@ -1,6 +1,6 @@
 [package]
 
-name = "tkr-hardware-board-esp32"
+name = "tkr-hardware-mcu-esp32"
 version = "0.1.0"
 authors = [
     "Michael Guerrier <token.thinkers@gmail.com>",
