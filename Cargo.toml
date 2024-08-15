@@ -7,6 +7,7 @@ members = [
     "hardware/mcu/esp32",
     "hardware/mcu/local",
     "hardware/mcu/rp2040",
+    "xtask",
 ]
 
 

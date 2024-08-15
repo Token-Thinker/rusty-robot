@@ -71,7 +71,7 @@ embassy-sync = { workspace = true }
 embassy-time = { workspace = true }
 embassy-executor = { workspace = true }
 picoserve = { version = "^0.11", features = ["embassy"] }
-hardware = { package = "tkr-hardware", path = "../hardware", default-features = false }
+hardware = { package = "tkr-hardware", path = "../hardware", default-features = false , features = ["mcu"] }
 
 
 # Optional deps
