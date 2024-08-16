@@ -5,9 +5,8 @@
 //! and receiving commands to control hardware components such as motors and servos.
 
 use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, channel::Channel};
+use hardware::mcu::init_mcu;
 use hardware::{MotorCommand, ServoCommand};
-use hardware::mcu::{init_mcu};
-
 
 /// Global Channel for WebSocket Messages
 ///
@@ -42,9 +41,9 @@ pub enum WebSocketMessage {
 /// It routes the messages to the appropriate handlers based on their type.
 #[embassy_executor::task]
 pub async fn command_router() {
-    let board=init_mcu();
-    let servos = board.servos;
-    let flywheels = board.components.flywheels;
+    let mcu = init_mcu();
+    let servos = mcu.servos;
+    let flywheels = mcu.flywheels;
 
     loop {
         match CHANNEL.receiver().receive().await {
@@ -55,10 +54,13 @@ pub async fn command_router() {
             WebSocketMessage::Servo(command) => {
                 tracing::info!("Received Servo Command: {:?}", command);
                 servos.proccess(command).await.unwarp();
-
             }
             WebSocketMessage::MotorAndServo { motor, servo } => {
-                tracing::info!("Received Motor Command: {:?} and Servo Command: {:?}",motor,servo);
+                tracing::info!(
+                    "Received Motor Command: {:?} and Servo Command: {:?}",
+                    motor,
+                    servo
+                );
             }
         }
     }

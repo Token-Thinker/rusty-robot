@@ -42,8 +42,8 @@ pub enum ServoCommand {
 /// - `tilt`: The servo motor responsible for tilting.
 ///
 pub struct ServoPair<Pan: PwmPin, Tilt: PwmPin> {
-    pan: Pan,
-    tilt: Tilt,
+    pub(crate) pan: Pan,
+    pub(crate) tilt: Tilt,
 }
 
 impl<Pan: PwmPin, Tilt: PwmPin> ServoPair<Pan, Tilt> {

@@ -8,23 +8,26 @@ extern crate alloc;
 use core::mem::MaybeUninit;
 use static_cell::make_static;
 
+use esp_wifi::{
+    initialize,
+    wifi::{WifiController, WifiDevice, WifiStaDevice},
+    EspWifiInitFor,
+};
+use hal::timer::{ErasedTimer, PeriodicTimer};
 use hal::{
     clock::ClockControl,
     gpio::{AnyOutput, GpioPin, Io, Level},
-    ledc::{{channel::{self, ChannelIFace}}, {timer::{self, TimerIFace}}, Ledc, LSGlobalClkSource, LowSpeed},
+    ledc::{
+        channel::{self, ChannelIFace},
+        timer::{self, TimerIFace},
+        LSGlobalClkSource, Ledc, LowSpeed,
+    },
     peripherals::Peripherals,
-    rng::Rng,
-    timer::timg::TimerGroup,
-    system::SystemControl,
     prelude::_fugit_RateExtU32,
+    rng::Rng,
+    system::SystemControl,
+    timer::timg::TimerGroup,
 };
-use esp_wifi::{
-    initialize,
-    EspWifiInitFor,
-    wifi::{WifiStaDevice, WifiDevice, WifiController},
-};
-use hal::timer::{ErasedTimer, PeriodicTimer};
-
 
 #[global_allocator]
 static ALLOCATOR: esp_alloc::EspHeap = esp_alloc::EspHeap::empty();
@@ -43,18 +46,17 @@ pub fn panic(_info: &core::panic::PanicInfo) -> ! {
     loop {}
 }
 
-
-pub struct MCU {
-    pub wifi_driver: WifiDevice<'static, WifiStaDevice>,
+pub struct MCU<WifiDriver, Flywheels, Loader, Pan, Tilt> {
+    pub wifi_driver: WifiDriver,
     pub wifi_controller: Option<WifiController<'static>>,
-    pub flywheels: AnyOutput<'static>,
-    pub loader: AnyOutput<'static>,
-    pub pan: hal::ledc::channel::Channel<'static, LowSpeed, GpioPin<10>>,
-    pub tilt: hal::ledc::channel::Channel<'static, LowSpeed, GpioPin<11>>,
+    pub flywheels: Flywheels,
+    pub loader: Loader,
+    pub pan: Pan,
+    pub tilt: Tilt,
 }
 
-impl MCU {
-    pub fn init() -> MCU {
+impl MCU<WifiDevice<'static, WifiStaDevice>, AnyOutput<'static>, AnyOutput<'static>, hal::ledc::channel::Channel<'static, LowSpeed, GpioPin<10>>, hal::ledc::channel::Channel<'static, LowSpeed, GpioPin<11>>> {
+    pub fn init() -> Self {
         init_heap();
 
         let peripherals = Peripherals::take();
@@ -73,7 +75,8 @@ impl MCU {
             Rng::new(peripherals.RNG),
             peripherals.RADIO_CLK,
             &clocks,
-        ).unwrap();
+        )
+        .unwrap();
         let wifi = peripherals.WIFI;
         let (wifi_driver, wifi_controller) =
             esp_wifi::wifi::new_with_mode(&init, wifi, WifiStaDevice).unwrap();
