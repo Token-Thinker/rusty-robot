@@ -1,11 +1,10 @@
 //! ## Servo Control Module
 //!
 //! Facilitates precise positioning of servos through angle conversion and command processing,
-//! supporting pan and tilt functionalities for [PwmPin](embedded_hal::pwm::SetDutyCycle as PwmPin;)
+//! supporting pan and tilt functionalities for [SetDutyCycle](embedded_hal::pwm::SetDutyCycle;)
 //!
 use core::fmt;
-
-pub use embedded_hal::pwm::SetDutyCycle as PwmPin;
+use embedded_hal::pwm::{self, SetDutyCycle, Error, ErrorType};
 
 /// Servo Command
 ///
@@ -26,6 +25,14 @@ pub enum ServoCommand {
     PanTilt(u8, u8),
 }
 
+/// Servo Error
+#[derive(Debug)]
+pub enum ServoError<P, T> {
+    PanError(P),
+    TiltError(T),
+    BothErrors(P, T),
+}
+
 /// Servo Pair
 ///
 /// A pair of servo motors for pan and tilt control.
@@ -41,12 +48,12 @@ pub enum ServoCommand {
 /// - `pan`: The servo motor responsible for panning.
 /// - `tilt`: The servo motor responsible for tilting.
 ///
-pub struct ServoPair<Pan: PwmPin, Tilt: PwmPin> {
+pub struct ServoPair<Pan: SetDutyCycle, Tilt: SetDutyCycle> {
     pub(crate) pan: Pan,
     pub(crate) tilt: Tilt,
 }
 
-impl<Pan: PwmPin, Tilt: PwmPin> ServoPair<Pan, Tilt> {
+impl<Pan: SetDutyCycle, Tilt: SetDutyCycle> ServoPair<Pan, Tilt> {
     /// Create a new `ServoPair` instance from the supplied pins
     pub fn new(pan: Pan, tilt: Tilt) -> Self {
         Self { pan, tilt }
@@ -113,22 +120,15 @@ pub trait Servo {
     fn process(&mut self, command: ServoCommand) -> Result<(), Self::Error>;
 }
 
-impl<PwmError: fmt::Debug, Pan: PwmPin<Error = PwmError>, Tilt: PwmPin<Error = PwmError>> Servo
-    for ServoPair<Pan, Tilt>
-{
-    type Error = PwmError;
+impl <P: SetDutyCycle, T: SetDutyCycle >Servo for ServoPair<P, T> {
+    type Error = ServoError<P::Error, T::Error>;
 
-    fn move_to(&mut self, duty_x: u16, duty_y: u16) -> Result<(), Self::Error> {
-        match (
-            self.pan.set_duty_cycle(duty_x),
-            self.tilt.set_duty_cycle(duty_y),
-        ) {
+    fn move_to(&mut self, x: u16, y: u16) -> Result<(), Self::Error> {
+        match (self.pan.set_duty_cycle(x), self.tilt.set_duty_cycle(y)) {
             (Ok(()), Ok(())) => Ok(()),
-            (Err(error), Ok(())) | (Ok(()), Err(error)) => Err(error),
-            (Err(_pan_error), Err(_tilt_error)) => {
-                // TODO(the-wondersmith): propagate both errors as a chain
-                todo!()
-            }
+            (Err(pan_error), Ok(())) => Err(ServoError::PanError(pan_error)),
+            (Ok(()), Err(tilt_error)) => Err(ServoError::TiltError(tilt_error)),
+            (Err(pan_error), Err(tilt_error)) => Err(ServoError::BothErrors(pan_error, tilt_error)),
         }
     }
 
