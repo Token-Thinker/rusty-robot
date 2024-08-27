@@ -6,8 +6,10 @@
 //! It includes modules for server functionality and message processing.
 
 #![allow(unexpected_cfgs, unused_qualifications)]
+#![no_std]
+
 #![cfg_attr(
-    all(feature = "board", target_os = "none", target_vendor = "unknown"),
+    all(feature = "mcu", target_os = "none", target_vendor = "unknown"),
     no_std
 )]
 

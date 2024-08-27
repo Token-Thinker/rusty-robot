@@ -6,13 +6,16 @@
 extern crate alloc;
 
 use core::mem::MaybeUninit;
-use static_cell::make_static;
+use static_cell::{make_static, StaticCell};
+use embassy_time::{Duration, Timer};
+
 
 use esp_wifi::{
     initialize,
     wifi::{WifiController, WifiDevice, WifiStaDevice},
     EspWifiInitFor,
 };
+use esp_wifi::wifi::{ClientConfiguration, Configuration, WifiEvent, WifiState};
 use hal::timer::{ErasedTimer, PeriodicTimer};
 use hal::{
     clock::ClockControl,
@@ -28,6 +31,8 @@ use hal::{
     system::SystemControl,
     timer::timg::TimerGroup,
 };
+
+pub use hal::prelude::main;
 
 #[global_allocator]
 static ALLOCATOR: esp_alloc::EspHeap = esp_alloc::EspHeap::empty();
@@ -48,12 +53,19 @@ pub fn panic(_info: &core::panic::PanicInfo) -> ! {
 
 pub struct MCU<WifiDriver, Flywheels, Loader, Pan, Tilt> {
     pub wifi_driver: WifiDriver,
-    pub wifi_controller: Option<WifiController<'static>>,
     pub flywheels: Flywheels,
     pub loader: Loader,
     pub pan: Pan,
     pub tilt: Tilt,
 }
+
+static mut WIFI_MANAGER: Option<WifiManager> = None;
+
+
+pub struct WifiManager{
+    pub wifi_controller: WifiController<'static>
+}
+
 
 impl MCU<WifiDevice<'static, WifiStaDevice>, AnyOutput<'static>, AnyOutput<'static>, hal::ledc::channel::Channel<'static, LowSpeed, GpioPin<10>>, hal::ledc::channel::Channel<'static, LowSpeed, GpioPin<11>>> {
     pub fn init() -> Self {
@@ -122,13 +134,60 @@ impl MCU<WifiDevice<'static, WifiStaDevice>, AnyOutput<'static>, AnyOutput<'stat
             })
             .unwrap();
 
-        MCU {
+        let mcu = MCU {
             wifi_driver,
-            wifi_controller: Option::from(wifi_controller),
             flywheels,
             loader,
             pan: (pchannel),
             tilt: (tchannel),
+        };
+
+        let wifi_manager = WifiManager{
+            wifi_controller,
+        };
+
+        unsafe {
+            WIFI_MANAGER = Some(wifi_manager);
+        }
+
+        mcu
+    }
+}
+
+const SSID: &str = "SSID";
+const PASSWORD: &str = "PASSWORD";
+#[embassy_executor::task]
+pub async fn connection() {
+    unsafe {
+        if let Some(manager) = WIFI_MANAGER.as_mut() {
+            let controller = &mut manager.wifi_controller;
+
+            loop {
+                match esp_wifi::wifi::get_wifi_state() {
+                    WifiState::StaConnected => {
+                        controller.wait_for_event(WifiEvent::StaDisconnected).await;
+                        Timer::after(Duration::from_millis(5000)).await;
+                    }
+                    _ => {}
+                }
+
+                if !matches!(controller.is_started(), Ok(true)) {
+                    let client_config = Configuration::Client(ClientConfiguration {
+                        ssid: SSID.try_into().unwrap(),
+                        password: PASSWORD.try_into().unwrap(),
+                        ..Default::default()
+                    });
+                    controller.set_configuration(&client_config).unwrap();
+                    controller.start().await.unwrap();
+                }
+
+                match controller.connect().await {
+                    Ok(_) => (),
+                    Err(e) => {
+                        Timer::after(Duration::from_millis(5000)).await;
+                    }
+                }
+            }
         }
     }
 }

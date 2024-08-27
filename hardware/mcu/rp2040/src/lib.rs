@@ -6,8 +6,8 @@
 use panic_halt as _;
 use rp2040_hal as hal;
 
+use hal::{gpio, pac, pwm};
 use rp2040_hal::clocks::Clock;
-use hal::{pac, pwm, gpio};
 
 #[link_section = ".boot2"]
 #[used]
@@ -19,14 +19,15 @@ const XTAL_FREQ_HZ: u32 = 12_000_000u32;
 pub struct MCU {
     //pub wifi_driver: todo,
     //pub wifi_controller: todo,
-    pub flywheels:  gpio::Pin<gpio::bank0::Gpio8, gpio::FunctionSio<gpio::SioOutput>, gpio::PullDown>,
+    pub flywheels:
+        gpio::Pin<gpio::bank0::Gpio8, gpio::FunctionSio<gpio::SioOutput>, gpio::PullDown>,
     pub loader: gpio::Pin<gpio::bank0::Gpio10, gpio::FunctionSio<gpio::SioOutput>, gpio::PullDown>,
-    pub pan:  pwm::Channel<pwm::Slice<pwm::Pwm4, pwm::FreeRunning>, pwm::B>,
+    pub pan: pwm::Channel<pwm::Slice<pwm::Pwm4, pwm::FreeRunning>, pwm::B>,
     pub tilt: pwm::Channel<pwm::Slice<pwm::Pwm2, pwm::FreeRunning>, pwm::A>,
 }
 
-impl MCU{
-    pub fn init() -> MCU{
+impl MCU {
+    pub fn init() -> MCU {
         // Grab our singleton objects
         let mut pac = pac::Peripherals::take().unwrap();
         let core = pac::CorePeripherals::take().unwrap();
@@ -46,7 +47,7 @@ impl MCU{
             &mut pac.RESETS,
             &mut watchdog,
         )
-            .unwrap();
+        .unwrap();
 
         // The single-cycle I/O block controls our GPIO pins
         let sio = hal::Sio::new(pac.SIO);
@@ -90,6 +91,5 @@ impl MCU{
             pan,
             tilt,
         }
-
     }
 }

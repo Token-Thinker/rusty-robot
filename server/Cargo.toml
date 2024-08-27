@@ -51,6 +51,7 @@ dev-server = [
     "embassy-executor/executor-thread",
     "embassy-executor/task-arena-size-32768",
 ]
+dev-server-mcu = []
 
 
 [[example]]
@@ -58,6 +59,13 @@ dev-server = [
 name = "dev-server"
 crate-type = ["bin"]
 required-features = ["dev-server"]
+
+[[example]]
+
+name = "dev-server-mcu"
+crate-type = ["bin"]
+required-features = ["dev-server-mcu"]
+path = "examples/dev-server-mcu.rs"
 
 
 [dependencies]
@@ -70,9 +78,10 @@ static_cell = { workspace = true }
 embassy-sync = { workspace = true }
 embassy-time = { workspace = true }
 embassy-executor = { workspace = true }
-picoserve = { version = "^0.11", features = ["embassy"] }
+picoserve = { version = "0.12.2", features = ["embassy"] }
 hardware = { package = "tkr-hardware", path = "../hardware", default-features = false , features = ["mcu"] }
-
+esp-hal-embassy = "0.2.0"
+esp-hal = "0.19.0"
 
 # Optional deps
 log = { workspace = true, optional = true }

@@ -64,6 +64,9 @@ pub mod mcu {
     use embassy_net::driver::Driver;
     use embedded_hal::pwm::SetDutyCycle;
 
+    #[cfg(target_arch = "xtensa")]
+    pub use super::board::{connection, main};
+
     pub trait MCUConfig <WifiDriver: Driver, Flywheels: Motor, Loader: Motor, Pan: SetDutyCycle, Tilt: SetDutyCycle> {
         fn components(self) -> MCUComponents<WifiDriver, Flywheels, Loader, Pan, Tilt>;
     }

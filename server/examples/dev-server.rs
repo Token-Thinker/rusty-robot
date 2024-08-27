@@ -6,7 +6,7 @@ use heapless::Vec;
 use log::*;
 use rand_core::{OsRng, RngCore};
 use static_cell::StaticCell;
-use tkr_server::{messages::command_router,server::{run as websocket_server}};
+use tkr_server::{messages::command_router, server::run as websocket_server};
 
 #[derive(Parser)]
 #[clap(version = "1.0")]
@@ -65,12 +65,11 @@ async fn main_task(spawner: Spawner) {
 
     // Run the WebSocket server
     websocket_server(
-        0,        // ID for the WebSocket server instance
-        8000,     // Port number
-        stack,
-        None
-    ).await;
-
+        0,    // ID for the WebSocket server instance
+        8000, // Port number
+        stack, None,
+    )
+    .await;
 }
 
 static EXECUTOR: StaticCell<Executor> = StaticCell::new();

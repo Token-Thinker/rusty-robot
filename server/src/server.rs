@@ -59,7 +59,7 @@ pub async fn run<Driver: NetworkDriver>(
         &mut tx_buffer,
         &mut http_buffer,
     )
-        .await
+    .await
 }
 
 /// Timer implementation for the server.
@@ -136,14 +136,21 @@ impl WebSocketCallback for WebSocket {
                     tracing::info!(?reason, "websocket closed");
                     break None;
                 }
-                Ok(Message::Text(data)) => match serde_json::from_str::<messages::WebSocketMessage>(data) {
-                    Ok(message) => {
-                        messages::CHANNEL.send(message).await;
-                        tx.send_text(data).await?
+                Ok(Message::Text(data)) => {
+                    match serde_json::from_str::<messages::WebSocketMessage>(data) {
+                        Ok(message) => {
+                            messages::CHANNEL.send(message).await;
+                            tx.send_text(data).await?
+                        }
+                        Err(error) => {
+                            tracing::error!(?error, "error deserializing incoming message")
+                        }
                     }
-                    Err(error) => tracing::error!(?error, "error deserializing incoming message"),
-                },
-                Ok(Message::Binary(data)) => match serde_json::from_slice::<messages::WebSocketMessage>(data) {
+                }
+                Ok(Message::Binary(data)) => match serde_json::from_slice::<
+                    messages::WebSocketMessage,
+                >(data)
+                {
                     Ok(message) => {
                         messages::CHANNEL.send(message).await;
                         tx.send_binary(data).await?

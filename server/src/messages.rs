@@ -6,7 +6,7 @@
 
 use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, channel::Channel};
 use hardware::mcu::init_mcu;
-use hardware::{MotorCommand, ServoCommand};
+use hardware::{Motor, MotorCommand, Servo, ServoCommand};
 
 /// Global Channel for WebSocket Messages
 ///
