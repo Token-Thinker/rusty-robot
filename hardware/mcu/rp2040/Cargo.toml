@@ -1,0 +1,25 @@
+[package]
+
+name = "rr-hardware-mcu-rp2040"
+version = "0.1.0"
+authors = [
+    "Michael Guerrier <token.thinkers@gmail.com>",
+    "Mark S. <the@wondersmith.dev>",
+]
+edition = "2021"
+license = "MIT OR Apache-2.0"
+
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+
+anyhow = { workspace = true }
+
+defmt = {workspace = true}
+embedded-hal = {workspace = true}
+
+rp2040-hal = "0.10.2"
+panic-halt = "0.2.0"
+rp2040-boot2 = "0.3.0"
+cortex-m = "0.7.2"

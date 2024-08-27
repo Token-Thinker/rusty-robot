@@ -1,0 +1,47 @@
+[package]
+
+name = "rr-hardware-mcu-esp32"
+version = "0.1.0"
+authors = [
+    "Michael Guerrier <token.thinkers@gmail.com>",
+    "Mark S. <the@wondersmith.dev>",
+]
+edition = "2021"
+license = "MIT OR Apache-2.0"
+
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[dependencies]
+
+static_cell = {workspace = true}
+embassy-executor = {workspace = true }
+embassy-time = {workspace = true}
+
+esp-alloc = "0.4.0"
+
+esp-wifi = { version = "0.7.1", default-features = false, features = [
+    "esp32",
+    "wifi",
+    "tcp",
+    "udp",
+    "embedded-svc",
+    "embassy-net",
+    "defmt"
+] }
+hal = { package = "esp-hal", version = "0.19.0", features = [
+    "esp32",
+    "defmt",
+    "debug",
+    "async",
+] }
+esp-hal-embassy = { version = "0.2.0", features = [
+    "integrated-timers",
+    "defmt"
+] }
+
+esp-backtrace = { version = "0.13.0", features = [
+    "esp32",
+    "panic-handler",
+    "exception-handler",
+    "defmt",
+] }
