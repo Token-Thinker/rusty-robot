@@ -1,6 +1,6 @@
 //! ## Messages Module
 //!
-//! This module handles the message passing mechanism for the WebSocket server.
+//! This module handles the message passing mechanism for the WebSocket comms.
 //! It defines the structure of the messages and provides a channel for sending
 //! and receiving commands to control hardware components such as motors and servos.
 

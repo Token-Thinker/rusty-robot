@@ -35,7 +35,7 @@ pub mod servo;
     target_arch = "xtensa",
     target_vendor = "unknown"
 ))]
-pub use tkr_hardware_mcu_esp32 as board;
+pub use rr_hardware_mcu_esp32 as board;
 
 // Local host target
 #[cfg(all(
@@ -43,7 +43,7 @@ pub use tkr_hardware_mcu_esp32 as board;
     not(target_os = "none"),
     not(target_vendor = "unknown")
 ))]
-pub use tkr_hardware_mcu_local as board;
+pub use rr_hardware_mcu_local as board;
 
 // RP2040 target
 #[cfg(all(
@@ -52,7 +52,7 @@ pub use tkr_hardware_mcu_local as board;
     target_arch = "arm",
     target_vendor = "unknown"
 ))]
-pub use tkr_hardware_mcu_rp2040 as board;
+pub use rr_hardware_mcu_rp2040 as board;
 
 pub use crate::{
     motor::{Motor, MotorCommand},

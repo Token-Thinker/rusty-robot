@@ -1,0 +1,42 @@
+[package]
+
+name = "rr-comms"
+version = "0.1.0"
+authors = [
+    "Michael Guerrier <token.thinkers@gmail.com>",
+    "Mark S. <the@wondersmith.dev>",
+]
+edition = "2021"
+license = "MIT OR Apache-2.0"
+
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+
+[features]
+
+default = []
+board = ["hardware/mcu"]
+
+
+[dependencies]
+
+serde = { workspace = true }
+tracing = { workspace = true }
+serde_json = { workspace = true }
+embassy-net = { workspace = true }
+static_cell = { workspace = true }
+embassy-sync = { workspace = true }
+embassy-time = { workspace = true }
+embassy-executor = { workspace = true }
+picoserve = { version = "0.12.2", features = ["embassy"] }
+hardware = { package = "rr-hardware", path = "../hardware", default-features = false , features = ["mcu"] }
+esp-hal-embassy = "0.2.0"
+esp-hal = "0.19.0"
+
+# Optional deps
+log = { workspace = true, optional = true }
+tracing-subscriber = { workspace = true, optional = true }
+
+[dev-dependencies]
+comms = {package = "rr-comms", path = "", default-features = false}

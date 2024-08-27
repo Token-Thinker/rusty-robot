@@ -52,8 +52,8 @@ pub fn build_package(
         Package::Rp2040 => vec![workspace.join("hardware/mcu/rp2040")],
     };
 
-    // Define the paths to the hardware and server packages
-    let common_packages = vec![workspace.join("hardware"), workspace.join("server")];
+    // Define the paths to the hardware and comms packages
+    let common_packages = vec![workspace.join("hardware"), workspace.join("../../comms")];
 
     // Build the MCU package first
     for package_path in &package_paths {
@@ -100,7 +100,7 @@ pub fn build_package(
         run(&cargo_args, package_path)?;
     }
 
-    // Now, build the hardware and server packages
+    // Now, build the hardware and comms packages
     for package_path in common_packages {
         println!("Building common package: {}", package_path.display());
 

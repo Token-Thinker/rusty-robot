@@ -1,6 +1,6 @@
 [package]
 
-name = "tkr-hardware-mcu-rp2040"
+name = "rr-hardware-mcu-rp2040"
 version = "0.1.0"
 authors = [
     "Michael Guerrier <token.thinkers@gmail.com>",

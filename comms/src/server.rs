@@ -1,7 +1,7 @@
 //! ## Server Module
 //!
-//! This module contains the implementation of the server, including
-//! the WebSocket handling and server configuration. It uses the
+//! This module contains the implementation of the comms, including
+//! the WebSocket handling and comms configuration. It uses the
 //! `picoserve` and `embassy` crates to manage network operations
 //! and timing.
 
@@ -16,18 +16,18 @@ use picoserve::{
     Router,
 };
 
-/// Runs the server with the given configuration.
+/// Runs the comms with the given configuration.
 ///
-/// This function initializes the server and starts listening for
+/// This function initializes the comms and starts listening for
 /// incoming connections. It sets up the necessary routing and
 /// handles WebSocket connections.
 ///
 /// # Parameters
 ///
-/// - `id`: The identifier for the server instance.
-/// - `port`: The port on which the server will listen.
+/// - `id`: The identifier for the comms instance.
+/// - `port`: The port on which the comms will listen.
 /// - `stack`: A reference to the network stack.
-/// - `config`: An optional configuration for the server.
+/// - `config`: An optional configuration for the comms.
 pub async fn run<Driver: NetworkDriver>(
     id: usize,
     port: u16,
@@ -62,7 +62,7 @@ pub async fn run<Driver: NetworkDriver>(
     .await
 }
 
-/// Timer implementation for the server.
+/// Timer implementation for the comms.
 ///
 /// This struct provides a timer that integrates with the `embassy_time`
 /// crate, allowing for asynchronous operations with timeout functionality.

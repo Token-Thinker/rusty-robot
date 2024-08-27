@@ -2,7 +2,8 @@
 
 resolver = "2"
 members = [
-    "server",
+    "app",
+    "comms",
     "hardware",
     "hardware/mcu/esp32",
     "hardware/mcu/local",

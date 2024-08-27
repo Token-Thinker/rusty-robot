@@ -11,7 +11,7 @@ use esp_hal::entry;
 use embassy_net::{Config, Ipv4Address, Ipv4Cidr, Stack, StackResources, driver::Driver};
 
 use hardware::mcu::{init_mcu, connection,main};
-use tkr_server::{messages::command_router, server::run as websocket_server};
+use comms::{messages::command_router, server::run as websocket_server};
 
 #[embassy_executor::task]
 async fn net_task(stack: &'static Stack<impl Driver>) -> ! {
@@ -45,11 +45,11 @@ async fn main(spawner: Spawner) {
     spawner.spawn(net_task(stack)).unwrap();
     spawner.spawn(connection()).unwrap();
 
-    tracing::info!("Starting WebSocket server");
+    tracing::info!("Starting WebSocket comms");
 
-    // Run the WebSocket server
+    // Run the WebSocket comms
     websocket_server(
-        0,    // ID for the WebSocket server instance
+        0,    // ID for the WebSocket comms instance
         8000, // Port number
         stack, None,
     ).await;

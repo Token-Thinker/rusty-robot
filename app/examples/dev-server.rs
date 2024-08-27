@@ -6,7 +6,7 @@ use heapless::Vec;
 use log::*;
 use rand_core::{OsRng, RngCore};
 use static_cell::StaticCell;
-use tkr_server::{messages::command_router, server::run as websocket_server};
+use comms::{messages::command_router, server::run as websocket_server};
 
 #[derive(Parser)]
 #[clap(version = "1.0")]
@@ -61,11 +61,11 @@ async fn main_task(spawner: Spawner) {
     // Launch network task
     spawner.spawn(net_task(stack)).unwrap();
 
-    info!("Starting WebSocket server on port 8000");
+    info!("Starting WebSocket comms on port 8000");
 
-    // Run the WebSocket server
+    // Run the WebSocket comms
     websocket_server(
-        0,    // ID for the WebSocket server instance
+        0,    // ID for the WebSocket comms instance
         8000, // Port number
         stack, None,
     )

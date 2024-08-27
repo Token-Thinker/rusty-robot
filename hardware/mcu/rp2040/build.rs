@@ -5,7 +5,7 @@
 //! are using a workspace or have a more complicated build setup, this
 //! build script becomes required. Additionally, by requesting that
 //! Cargo re-run the build script whenever `memory.x` is changed,
-//! updating `memory.x` ensures a rebuild of the application with the
+//! updating `memory.x` ensures a rebuild of the app with the
 //! new memory settings.
 
 use std::{env, fs::File, io::Write, path::PathBuf};
