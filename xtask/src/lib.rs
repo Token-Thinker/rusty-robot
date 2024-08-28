@@ -1,5 +1,4 @@
 use std::{
-    fs,
     path::{Path, PathBuf},
 };
 use anyhow::{bail, Result};
@@ -26,7 +25,7 @@ pub mod cargo;
 )]
 #[serde(rename_all = "kebab-case")]
 #[strum(serialize_all = "kebab-case")]
-pub enum Package {
+pub enum Platform {
     #[strum(serialize = "esp32")]
     Esp32,
     #[strum(serialize = "local")]
@@ -39,25 +38,17 @@ pub enum Package {
 /// provided.
 pub fn build_package(
     workspace: &Path,
-    mut features: Vec<String>,
+    features: Vec<String>,
     no_default_features: bool,
     toolchain: Option<String>,
     target: Option<String>,
-    package: Package,
+    platform: Platform,
 ) -> Result<()> {
-    // First, determine the path to the MCU package based on the selected package
-    let package_paths = match package {
-        Package::Esp32 => vec![workspace.join("hardware/mcu/esp32")],
-        Package::Local => vec![workspace.join("hardware/mcu/local")],
-        Package::Rp2040 => vec![workspace.join("hardware/mcu/rp2040")],
-    };
+    let package_paths = find_package_paths(workspace, platform)?;
 
-    // Define the paths to the hardware and comms packages
-    let common_packages = vec![workspace.join("hardware"), workspace.join("../../comms")];
-
-    // Build the MCU package first
-    for package_path in &package_paths {
-        println!("Building MCU package: {}", package_path.display());
+    //Build each discovered package
+    for package_path in package_paths {
+        println!("Building package: {}", package_path.display());
 
         if !package_path.exists() || !package_path.join("Cargo.toml").exists() {
             bail!(
@@ -71,8 +62,17 @@ pub fn build_package(
         let mut builder = CargoArgsBuilder::default()
             .subcommand("build")
             .arg("--release")
+            .arg("--quiet")
             .arg("--manifest-path")
             .arg(package_path.join("Cargo.toml").to_string_lossy().to_string());
+
+        if package_path.ends_with("hardware") || package_path.ends_with("comms") {
+            let mut specific_features = features.clone();
+            specific_features.push(platform.to_string());
+            builder = builder.features(&specific_features);
+        } else {
+            builder = builder.features(&features);
+        }
 
         if let Some(toolchain) = &toolchain {
             builder = builder.toolchain(toolchain);
@@ -86,10 +86,6 @@ pub fn build_package(
             }
         }
 
-        if !features.is_empty() {
-            builder = builder.features(&features);
-        }
-
         if no_default_features {
             builder = builder.arg("--no-default-features");
         }
@@ -97,57 +93,8 @@ pub fn build_package(
         let cargo_args = builder.build();
         info!("Running cargo with args: {:?}", cargo_args);
 
-        run(&cargo_args, package_path)?;
-    }
-
-    // Now, build the hardware and comms packages
-    for package_path in common_packages {
-        println!("Building common package: {}", package_path.display());
-
-        if !package_path.exists() || !package_path.join("Cargo.toml").exists() {
-            bail!(
-                "The package path '{}' is not a valid directory or doesn't contain Cargo.toml",
-                package_path.display()
-            );
-        }
-
-        info!("Building package '{}'", package_path.display());
-
-        // Ensure the "mcu" feature is included when building the hardware package
-        let mut common_builder = CargoArgsBuilder::default()
-            .subcommand("build")
-            .arg("--release")
-            .arg("--manifest-path")
-            .arg(package_path.join("Cargo.toml").to_string_lossy().to_string());
-
-        if let Some(toolchain) = &toolchain {
-            common_builder = common_builder.toolchain(toolchain);
-        }
-
-        if let Some(target) = &target {
-            common_builder = common_builder.target(target);
-            if target.contains("xtensa") {
-                common_builder = common_builder.toolchain("esp");
-                common_builder = common_builder.arg("-Zbuild-std=core,alloc");
-            }
-        }
-
-        // Add the "mcu" feature if building the hardware package
-        if package_path.ends_with("hardware") {
-            if !features.contains(&"mcu".to_string()) {
-                features.push("mcu".to_string());
-            }
-            common_builder = common_builder.features(&features);
-        }
-
-        if no_default_features {
-            common_builder = common_builder.arg("--no-default-features");
-        }
-
-        let cargo_args = common_builder.build();
-        info!("Running cargo with args: {:?}", cargo_args);
-
         run(&cargo_args, &package_path)?;
+
     }
 
     Ok(())
@@ -155,45 +102,18 @@ pub fn build_package(
 
 // ----------------------------------------------------------------------------
 // Helper Functions
+fn find_package_paths(workspace: &Path, platform: Platform) -> Result<Vec<PathBuf>> {
+    let mut package_paths = vec![];
 
-/// Return a (sorted) list of paths to each valid Cargo package in the
-/// workspace.
-pub fn package_paths(workspace: &Path, package: Package) -> Result<Vec<PathBuf>> {
-    println!("package_paths invoked with workspace: {}", workspace.display());
-    let mut paths = Vec::new();
-    let target_subdir = match package {
-        Package::Esp32 => "hardware/mcu/esp32",
-        Package::Local => "hardware/mcu/local",
-        Package::Rp2040 => "hardware/mcu/rp2040"
-    };
+    // Add the platform-specific MCU package
+    let platform_mcu_path = workspace.join(format!("hardware/mcu/{:?}", platform).to_lowercase());
+    package_paths.push(platform_mcu_path);
 
-    for entry in fs::read_dir(workspace)? {
-        let entry = entry?;
-        if entry.file_type()?.is_dir() {
-            let path = entry.path();
-            println!("Checking path: {}", path.display());
-            // Ensure it is a package (has Cargo.toml)
-            if path.join("Cargo.toml").exists() {
-                paths.push(path.clone());
-            }
+    // Add common packages
+    let common_paths = vec![workspace.join("hardware"), workspace.join("comms")];
+    package_paths.extend(common_paths);
 
-            // Check for nested packages like in `hardware/mcu`
-            if let Ok(subdirs) = fs::read_dir(path.join("mcu")) {
-                for subdir in subdirs {
-                    let subdir = subdir?;
-                    if subdir.file_type()?.is_dir() {
-                        let subdir_path = subdir.path();
-                        if subdir_path.ends_with(target_subdir) && subdir_path.join("Cargo.toml").exists() {
-                            paths.push(subdir_path);
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    paths.sort();
-    Ok(paths)
+    Ok(package_paths)
 }
 
 /// Make the path "Windows"-safe

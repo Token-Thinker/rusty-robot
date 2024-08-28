@@ -1,7 +1,7 @@
 use std::path::{Path, PathBuf};
 use anyhow::Result;
 use clap::{Args, Parser};
-use xtask::{Package};
+use xtask::{Platform};
 
 
 // ----------------------------------------------------------------------------
@@ -13,9 +13,9 @@ enum Cli {
 
 #[derive(Debug, Args)]
 struct BuildPackageArgs {
-    /// Target MCU to build for.
+    /// Target platform to build for.
     #[arg(value_enum)]
-    package: Package,
+    platform: Platform,
     /// Target to build for.
     #[arg(long)]
     target: Option<String>,
@@ -55,8 +55,6 @@ fn build_package(workspace: &Path, args: BuildPackageArgs) -> Result<()> {
     // Absolute path of the package's root:
     let package_path = xtask::windows_safe_path(workspace);
 
-    // Determine the toolchain to use based on the target
-
     println!("Workspace path: {}", workspace.display());
 
     // Build the package using the provided features and/or target, if any:
@@ -66,6 +64,6 @@ fn build_package(workspace: &Path, args: BuildPackageArgs) -> Result<()> {
         args.no_default_features,
         args.toolchain,
         args.target,
-        args.package,
+        args.platform,
     )
 }

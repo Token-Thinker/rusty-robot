@@ -1,9 +1,5 @@
 #![no_std]
 #![allow(unexpected_cfgs, unused_qualifications)]
-#![cfg_attr(
-    all(feature = "mcu", target_os = "none", target_vendor = "unknown"),
-    no_std
-)]
 
 //! ## Hardware Library
 //!

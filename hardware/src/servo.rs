@@ -4,7 +4,7 @@
 //! supporting pan and tilt functionalities for [SetDutyCycle](embedded_hal::pwm::SetDutyCycle;)
 //!
 use core::fmt;
-use embedded_hal::pwm::{self, SetDutyCycle, Error, ErrorType};
+use embedded_hal::pwm::{SetDutyCycle};
 
 /// Servo Command
 ///
@@ -68,6 +68,7 @@ impl<Pan: SetDutyCycle, Tilt: SetDutyCycle> ServoPair<Pan, Tilt> {
 ///
 /// The `Servo` trait is designed to be implemented for various types of servos,
 /// allowing for flexibility and extensibility in servo control implementations.
+#[allow(async_fn_in_trait)]
 pub trait Servo {
     type Error: fmt::Debug;
 
@@ -86,7 +87,7 @@ pub trait Servo {
     ///
     /// * `Result<(), Self::Error>` - Returns `Ok(())` if the servo successfully moves to the
     /// specified coordinates, or an error of type `Self::Error` if the operation fails.
-    fn move_to(&mut self, x: u16, y: u16) -> Result<(), Self::Error>;
+    async fn move_to(&mut self, x: u16, y: u16) -> Result<(), Self::Error>;
 
     /// Helper function to convert angle (0 to 180) to PWM signal based on 14-bit resolution
     ///
@@ -117,27 +118,28 @@ pub trait Servo {
     ///
     /// * `Result<(), Self::Error>` - Returns `Ok(())` if the command is successfully processed,
     /// or an error of type `Self::Error` if the operation fails.
-    fn process(&mut self, command: ServoCommand) -> Result<(), Self::Error>;
+    async fn process(&mut self, command: ServoCommand) -> Result<(), Self::Error>;
 }
 
 impl <P: SetDutyCycle, T: SetDutyCycle >Servo for ServoPair<P, T> {
     type Error = ServoError<P::Error, T::Error>;
 
-    fn move_to(&mut self, x: u16, y: u16) -> Result<(), Self::Error> {
+    async fn move_to(&mut self, x: u16, y: u16) -> Result<(), Self::Error> {
         match (self.pan.set_duty_cycle(x), self.tilt.set_duty_cycle(y)) {
             (Ok(()), Ok(())) => Ok(()),
             (Err(pan_error), Ok(())) => Err(ServoError::PanError(pan_error)),
             (Ok(()), Err(tilt_error)) => Err(ServoError::TiltError(tilt_error)),
             (Err(pan_error), Err(tilt_error)) => Err(ServoError::BothErrors(pan_error, tilt_error)),
         }
+
     }
 
-    fn process(&mut self, command: ServoCommand) -> Result<(), Self::Error> {
+    async fn process(&mut self, command: ServoCommand) -> Result<(), Self::Error> {
         match command {
             ServoCommand::Rest(_) => todo!(),
             ServoCommand::Pan(_value) => todo!(),
             ServoCommand::Tilt(_value) => todo!(),
-            ServoCommand::PanTilt(x, y) => self.move_to(Self::pwm_value(x), Self::pwm_value(y)),
+            ServoCommand::PanTilt(x, y) => self.move_to(Self::pwm_value(x), Self::pwm_value(y)).await,
         }
     }
 }

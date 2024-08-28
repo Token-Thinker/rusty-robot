@@ -21,9 +21,9 @@ default = ["mcu"]
 # the features below are used internally
 # by the crate's build script, and should
 # *NOT* be used or referenced otherwise
-_esp32 = ["dep:rr-hardware-mcu-esp32"] #This is what is causing the issue, if commet it out and remove option it compiles
-_local = ["dep:rr-hardware-mcu-local"]
-_rp2040 = ["dep:rr-hardware-mcu-rp2040"]
+esp32 = ["dep:rr-hardware-mcu-esp32"]
+local = ["dep:rr-hardware-mcu-local"]
+rp2040 = ["dep:rr-hardware-mcu-rp2040"]
 
 
 [dependencies]
@@ -34,7 +34,7 @@ embassy-time = { workspace = true }
 embedded-hal = { workspace = true }
 embassy-net = {workspace = true}
 
-rr-hardware-mcu-esp32 = { path = "mcu/esp32", optional = true} #If I remove the optional it works for compiling
+rr-hardware-mcu-esp32 = { path = "mcu/esp32", optional = true}
 rr-hardware-mcu-local = { path = "mcu/local", optional = true }
 rr-hardware-mcu-rp2040 = { path = "mcu/rp2040", optional = true }
 

@@ -42,18 +42,18 @@ pub enum WebSocketMessage {
 #[embassy_executor::task]
 pub async fn command_router() {
     let mcu = init_mcu();
-    let servos = mcu.servos;
-    let flywheels = mcu.flywheels;
+    let mut servos = mcu.servos;
+    let mut flywheels = mcu.flywheels;
 
     loop {
         match CHANNEL.receiver().receive().await {
             WebSocketMessage::Motor(command) => {
                 tracing::info!("Received Motor Command: {:?}", command);
-                flywheels.proccess(command).await.unwrap();
+                flywheels.process(command).await.unwrap();
             }
             WebSocketMessage::Servo(command) => {
                 tracing::info!("Received Servo Command: {:?}", command);
-                servos.proccess(command).await.unwarp();
+                servos.process(command).await.unwrap();
             }
             WebSocketMessage::MotorAndServo { motor, servo } => {
                 tracing::info!(

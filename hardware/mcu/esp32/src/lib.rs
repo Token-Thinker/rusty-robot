@@ -6,7 +6,7 @@
 extern crate alloc;
 
 use core::mem::MaybeUninit;
-use static_cell::{make_static, StaticCell};
+use static_cell::{make_static};
 use embassy_time::{Duration, Timer};
 
 
@@ -183,7 +183,7 @@ pub async fn connection() {
 
                 match controller.connect().await {
                     Ok(_) => (),
-                    Err(e) => {
+                    Err(_e) => {
                         Timer::after(Duration::from_millis(5000)).await;
                     }
                 }
