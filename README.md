@@ -14,6 +14,16 @@ The project leverages modern Rust features, including asynchronous programming a
 - Thank you to the Rust community for their invaluable resources and support
 - Inspired by ROS, YARP and Orca to make a robotics platform for embedded devices that require low resources
 
+## Getting Started
+Currently, the project in very early development meaning that you will be able to build each library separately, however at the time of writing this you can pass the variables from the boards to the application yet.
+We use `xtask` to build and run the project in a modular way so every aspect of it gets configured correctly. At the time of writing this _only_ `esp32` has been worked on and _only_ for `Xtensa`
+
+If you are running Rust Rover, you will need to create a `rust-toolchain.toml` and change the channel to `esp`. This has not been tested on any other ide, however `xtask` denotes the toolchain at time of build.
+
+>Build: `cargo xtask build-package esp32 --target xtensa-esp32-none-elf`
+
+>Run: `cargo xtask run esp32  --bin rr-app`
+
 ## Architecture
 
               +--------------------------------------------------------+                                                         

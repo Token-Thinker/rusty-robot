@@ -9,6 +9,7 @@ use xtask::{Platform};
 #[derive(Debug, Parser)]
 enum Cli {
     BuildPackage(BuildPackageArgs),
+    Run(RunArgs),
 }
 
 #[derive(Debug, Args)]
@@ -19,6 +20,25 @@ struct BuildPackageArgs {
     /// Target to build for.
     #[arg(long)]
     target: Option<String>,
+    /// Features to build with.
+    #[arg(long, value_delimiter = ',')]
+    features: Vec<String>,
+    /// Toolchain to build with.
+    #[arg(long)]
+    toolchain: Option<String>,
+    /// Don't enable the default features.
+    #[arg(long)]
+    no_default_features: bool,
+}
+
+#[derive(Debug, Args)]
+struct RunArgs {
+    /// Target platform to build for.
+    #[arg(value_enum)]
+    platform: Platform,
+    /// Which part of the app to run (main, examples, etc.)
+    #[arg(long)]
+    bin: String,
     /// Features to build with.
     #[arg(long, value_delimiter = ',')]
     features: Vec<String>,
@@ -42,9 +62,10 @@ fn main() -> Result<()> {
     let workspace = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     let workspace = workspace.parent().unwrap().canonicalize()?;
 
-    println!("Invoking build_package...");
     match Cli::parse() {
         Cli::BuildPackage(args) => build_package(&workspace, args),
+        Cli::Run(args) => run(&workspace, args),
+
     }
 }
 
@@ -65,5 +86,20 @@ fn build_package(workspace: &Path, args: BuildPackageArgs) -> Result<()> {
         args.toolchain,
         args.target,
         args.platform,
+    )
+}
+
+fn run(workspace: &Path, args: RunArgs) -> Result<()> {
+    let package_path = xtask::windows_safe_path(workspace);
+
+    println!("Workspace path: {}", workspace.display());
+
+    xtask::run_package(
+        &package_path,
+        args.features,
+        args.no_default_features,
+        args.toolchain,
+        args.platform,
+        &args.bin,
     )
 }
