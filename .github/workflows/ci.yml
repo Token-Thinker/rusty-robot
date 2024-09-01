@@ -44,21 +44,18 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # Install the Rust toolchain for Xtensa devices:
+      - uses: esp-rs/xtensa-toolchain@v1.5
+        with:
+          ldproxy: false
+
       # Setup Rust toolchain
-      - name: Setup Rust
+      - name: Build and Check
         uses: actions-rs/toolchain@v1
         with:
-          profile: minimal
           toolchain: ${{ matrix.device.toolchain }}
           target: ${{ matrix.device.target }}
           components: rust-src
-
-      # Install Xtensa toolchain for ESP32 targets
-      - name: Install Xtensa Toolchain (ESP32 only)
-        if: matrix.device.soc == 'esp32'
-        uses: esp-rs/xtensa-toolchain@v1.5
-        with:
-          ldproxy: false
 
       # Cache Cargo builds
       - uses: Swatinem/rust-cache@v2
@@ -91,29 +88,14 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-
-      # Setup Rust toolchain
-      - name: Setup Rust
-        uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: ${{ matrix.device.toolchain }}
-          target: ${{ matrix.device.target }}
-          components: rust-src
-
-      # Install Xtensa toolchain for ESP32 targets
-      - name: Install Xtensa Toolchain (ESP32 only)
-        if: matrix.device.soc == 'esp32'
-        uses: esp-rs/xtensa-toolchain@v1.5
+      - uses: esp-rs/xtensa-toolchain@v1.5
         with:
           ldproxy: false
           version: ${{ env.MSRV }}
-
-      # Cache Cargo builds
       - uses: Swatinem/rust-cache@v2
 
       # Verify MSRV compliance
-      - name: MSRV Check
+      - name: msrv Verification
         run: cargo xtask build-package ${{ matrix.device.soc }} --target ${{ matrix.device.target }}
 
   # --------------------------------------------------------------------------
