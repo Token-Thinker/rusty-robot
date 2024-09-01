@@ -2,42 +2,48 @@
 #![allow(unused_qualifications)]
 #![feature(type_alias_impl_trait)]
 
-
 extern crate alloc;
 
 use core::mem::MaybeUninit;
-use static_cell::{make_static};
+
 use embassy_time::{Duration, Timer};
-
-
 use esp_wifi::{
     initialize,
-    wifi::{WifiController, WifiDevice, WifiStaDevice},
+    wifi::{
+        ClientConfiguration,
+        Configuration,
+        WifiController,
+        WifiDevice,
+        WifiEvent,
+        WifiStaDevice,
+        WifiState,
+    },
     EspWifiInitFor,
 };
-use esp_wifi::wifi::{ClientConfiguration, Configuration, WifiEvent, WifiState};
-use hal::timer::{ErasedTimer, PeriodicTimer};
+pub use hal::prelude::main;
 use hal::{
     clock::ClockControl,
     gpio::{AnyOutput, GpioPin, Io, Level},
     ledc::{
         channel::{self, ChannelIFace},
         timer::{self, TimerIFace},
-        LSGlobalClkSource, Ledc, LowSpeed,
+        LSGlobalClkSource,
+        Ledc,
+        LowSpeed,
     },
     peripherals::Peripherals,
     prelude::_fugit_RateExtU32,
     rng::Rng,
     system::SystemControl,
-    timer::timg::TimerGroup,
+    timer::{timg::TimerGroup, ErasedTimer, PeriodicTimer},
 };
-
-pub use hal::prelude::main;
+use static_cell::make_static;
 
 #[global_allocator]
 static ALLOCATOR: esp_alloc::EspHeap = esp_alloc::EspHeap::empty();
 
-fn init_heap() {
+fn init_heap()
+{
     const HEAP_SIZE: usize = 32 * 1024;
     static mut HEAP: MaybeUninit<[u8; HEAP_SIZE]> = MaybeUninit::uninit();
 
@@ -47,11 +53,10 @@ fn init_heap() {
 }
 
 #[panic_handler]
-pub fn panic(_info: &core::panic::PanicInfo) -> ! {
-    loop {}
-}
+pub fn panic(_info: &core::panic::PanicInfo) -> ! { loop {} }
 
-pub struct MCU<WifiDriver, Flywheels, Loader, Pan, Tilt> {
+pub struct MCU<WifiDriver, Flywheels, Loader, Pan, Tilt>
+{
     pub wifi_driver: WifiDriver,
     pub flywheels: Flywheels,
     pub loader: Loader,
@@ -61,14 +66,22 @@ pub struct MCU<WifiDriver, Flywheels, Loader, Pan, Tilt> {
 
 static mut WIFI_MANAGER: Option<WifiManager> = None;
 
-
-pub struct WifiManager{
-    pub wifi_controller: WifiController<'static>
+pub struct WifiManager
+{
+    pub wifi_controller: WifiController<'static>,
 }
 
-
-impl MCU<WifiDevice<'static, WifiStaDevice>, AnyOutput<'static>, AnyOutput<'static>, hal::ledc::channel::Channel<'static, LowSpeed, GpioPin<10>>, hal::ledc::channel::Channel<'static, LowSpeed, GpioPin<11>>> {
-    pub fn init() -> Self {
+impl
+    MCU<
+        WifiDevice<'static, WifiStaDevice>,
+        AnyOutput<'static>,
+        AnyOutput<'static>,
+        hal::ledc::channel::Channel<'static, LowSpeed, GpioPin<10>>,
+        hal::ledc::channel::Channel<'static, LowSpeed, GpioPin<11>>,
+    >
+{
+    pub fn init() -> Self
+    {
         init_heap();
 
         let peripherals = Peripherals::take();
@@ -92,7 +105,6 @@ impl MCU<WifiDevice<'static, WifiStaDevice>, AnyOutput<'static>, AnyOutput<'stat
         let wifi = peripherals.WIFI;
         let (wifi_driver, wifi_controller) =
             esp_wifi::wifi::new_with_mode(&init, wifi, WifiStaDevice).unwrap();
-
 
         let flywheels = AnyOutput::new(io.pins.gpio4, Level::Low);
         let loader = AnyOutput::new(io.pins.gpio5, Level::Low);
@@ -142,9 +154,7 @@ impl MCU<WifiDevice<'static, WifiStaDevice>, AnyOutput<'static>, AnyOutput<'stat
             tilt: (tchannel),
         };
 
-        let wifi_manager = WifiManager{
-            wifi_controller,
-        };
+        let wifi_manager = WifiManager { wifi_controller };
 
         unsafe {
             WIFI_MANAGER = Some(wifi_manager);
@@ -157,7 +167,8 @@ impl MCU<WifiDevice<'static, WifiStaDevice>, AnyOutput<'static>, AnyOutput<'stat
 const SSID: &str = "SSID";
 const PASSWORD: &str = "PASSWORD";
 #[embassy_executor::task]
-pub async fn connection() {
+pub async fn connection()
+{
     unsafe {
         if let Some(manager) = WIFI_MANAGER.as_mut() {
             let controller = &mut manager.wifi_controller;

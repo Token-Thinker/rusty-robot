@@ -2,33 +2,38 @@
 //!
 //! This module handles the message passing mechanism for the WebSocket comms.
 //! It defines the structure of the messages and provides a channel for sending
-//! and receiving commands to control hardware components such as motors and servos.
+//! and receiving commands to control hardware components such as motors and
+//! servos.
 
 use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, channel::Channel};
-use hardware::mcu::init_mcu;
-use hardware::{Motor, MotorCommand, Servo, ServoCommand};
+use hardware::{mcu::init_mcu, Motor, MotorCommand, Servo, ServoCommand};
 
 /// Global Channel for WebSocket Messages
 ///
-/// This static channel is used to send and receive `WebSocketMessage` instances.
-/// It employs a `CriticalSectionRawMutex` for synchronization and has a capacity of 64 messages.
+/// This static channel is used to send and receive `WebSocketMessage`
+/// instances. It employs a `CriticalSectionRawMutex` for synchronization and
+/// has a capacity of 64 messages.
 pub static CHANNEL: Channel<CriticalSectionRawMutex, WebSocketMessage, 64> = Channel::new();
 
 /// WebSocket Message Enum
 ///
-/// This enum defines the different types of messages that can be received via WebSocket.
-/// It includes commands for motors, servos, and combined motor and servo commands.
+/// This enum defines the different types of messages that can be received via
+/// WebSocket. It includes commands for motors, servos, and combined motor and
+/// servo commands.
 ///
 /// # Variants
 ///
 /// - `Motor(MotorCommand)`: A command to control a motor.
 /// - `Servo(ServoCommand)`: A command to control a servo.
-/// - `MotorAndServo { motor, servo }`: A command that includes both motor and servo commands.
+/// - `MotorAndServo { motor, servo }`: A command that includes both motor and
+///   servo commands.
 #[derive(Copy, Clone, Debug, serde::Serialize, serde::Deserialize)]
-pub enum WebSocketMessage {
+pub enum WebSocketMessage
+{
     Motor(MotorCommand),
     Servo(ServoCommand),
-    MotorAndServo {
+    MotorAndServo
+    {
         motor: MotorCommand,
         servo: ServoCommand,
     },
@@ -37,10 +42,12 @@ pub enum WebSocketMessage {
 
 /// Command Router Task
 ///
-/// This asynchronous task continuously listens for incoming `WebSocketMessage` instances from the `CHANNEL`.
-/// It routes the messages to the appropriate handlers based on their type.
+/// This asynchronous task continuously listens for incoming `WebSocketMessage`
+/// instances from the `CHANNEL`. It routes the messages to the appropriate
+/// handlers based on their type.
 #[embassy_executor::task]
-pub async fn command_router() {
+pub async fn command_router()
+{
     let mcu = init_mcu();
     let mut servos = mcu.servos;
     let mut flywheels = mcu.flywheels;

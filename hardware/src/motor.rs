@@ -3,7 +3,6 @@
 //! Adds basic single-motor control functionality, including
 //! configurable launch sequences to any type that implements
 //! [OutputPin](embedded_hal::digital::OutputPin).
-//!
 
 use core::fmt;
 
@@ -20,7 +19,8 @@ use embedded_hal::digital::OutputPin;
 /// - `Launch`: Launch the motor with a predefined sequence.
 ///   - Ex: `{ "Motor": "Launch" }`
 #[derive(Copy, Clone, fmt::Debug, serde::Serialize, serde::Deserialize)]
-pub enum MotorCommand {
+pub enum MotorCommand
+{
     On,
     Off,
     Launch,
@@ -35,7 +35,8 @@ pub enum MotorCommand {
 /// The `Motor` trait is designed to be implemented for various types of motors,
 /// allowing for flexibility and extensibility in motor control implementations.
 #[allow(async_fn_in_trait)]
-pub trait Motor {
+pub trait Motor
+{
     type Error: fmt::Debug;
 
     /// Turn the motor on
@@ -46,7 +47,8 @@ pub trait Motor {
     ///
     /// # Returns
     ///
-    /// * `Result<(), Self::Error>` - Returns `Ok(())` if the motor is successfully turned on,
+    /// * `Result<(), Self::Error>` - Returns `Ok(())` if the motor is
+    ///   successfully turned on,
     /// or an error of type `Self::Error` if the operation fails.
     fn on(&mut self) -> Result<(), Self::Error>;
 
@@ -58,19 +60,21 @@ pub trait Motor {
     ///
     /// # Returns
     ///
-    /// * `Result<(), Self::Error>` - Returns `Ok(())` if the motor is successfully turned off,
+    /// * `Result<(), Self::Error>` - Returns `Ok(())` if the motor is
+    ///   successfully turned off,
     /// or an error of type `Self::Error` if the operation fails.
     fn off(&mut self) -> Result<(), Self::Error>;
 
     /// Execute a customizable launch sequence
     ///
     /// This asynchronous method allows for the execution of a launch sequence,
-    /// which could involve rapid toggling or other initialization routines specific
-    /// to the motor being controlled.
+    /// which could involve rapid toggling or other initialization routines
+    /// specific to the motor being controlled.
     ///
     /// # Returns
     ///
-    /// * `Result<(), Self::Error>` - Returns `Ok(())` if the launch sequence is successfully executed,
+    /// * `Result<(), Self::Error>` - Returns `Ok(())` if the launch sequence is
+    ///   successfully executed,
     /// or an error of type `Self::Error` if the operation fails.
     async fn launch(&mut self) -> Result<(), Self::Error>;
 
@@ -81,28 +85,31 @@ pub trait Motor {
     ///
     /// # Parameters
     ///
-    /// * `command` - A `MotorCommand` instance representing the command to be processed.
+    /// * `command` - A `MotorCommand` instance representing the command to be
+    ///   processed.
     ///
     /// # Returns
     ///
-    /// * `Result<(), Self::Error>` - Returns `Ok(())` if the command is successfully processed,
+    /// * `Result<(), Self::Error>` - Returns `Ok(())` if the command is
+    ///   successfully processed,
     /// or an error of type `Self::Error` if the operation fails.
-    async fn process(&mut self, command: MotorCommand) -> Result<(), Self::Error>;
+    async fn process(
+        &mut self,
+        command: MotorCommand,
+    ) -> Result<(), Self::Error>;
 }
 
-impl<T: OutputPin> Motor for T {
+impl<T: OutputPin> Motor for T
+{
     type Error = T::Error;
 
-    fn on(&mut self) -> Result<(), Self::Error> {
-        self.set_high()
-    }
+    fn on(&mut self) -> Result<(), Self::Error> { self.set_high() }
 
-    fn off(&mut self) -> Result<(), Self::Error> {
-        self.set_low()
-    }
+    fn off(&mut self) -> Result<(), Self::Error> { self.set_low() }
 
     // TODO(mguerrier): configure launch sequence for smooth transition
-    async fn launch(&mut self) -> Result<(), Self::Error> {
+    async fn launch(&mut self) -> Result<(), Self::Error>
+    {
         for _ in 0..100 {
             self.set_high()?;
             Timer::after(Duration::from_millis(100)).await;
@@ -112,7 +119,11 @@ impl<T: OutputPin> Motor for T {
         Ok(())
     }
 
-    async fn process(&mut self, command: MotorCommand) -> Result<(), Self::Error> {
+    async fn process(
+        &mut self,
+        command: MotorCommand,
+    ) -> Result<(), Self::Error>
+    {
         match command {
             MotorCommand::On => self.on(),
             MotorCommand::Off => self.off(),

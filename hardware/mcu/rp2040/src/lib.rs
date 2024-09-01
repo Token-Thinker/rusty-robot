@@ -1,12 +1,11 @@
-//Highly unstable - not tested at all
+// Highly unstable - not tested at all
 
 #![no_std]
 #![no_main]
 
+use hal::{gpio, pac, pwm};
 use panic_halt as _;
 use rp2040_hal as hal;
-
-use hal::{gpio, pac, pwm};
 use rp2040_hal::clocks::Clock;
 
 #[link_section = ".boot2"]
@@ -16,9 +15,10 @@ const LOW: u16 = 0;
 const HIGH: u16 = 25000;
 const XTAL_FREQ_HZ: u32 = 12_000_000u32;
 
-pub struct MCU {
-    //pub wifi_driver: todo,
-    //pub wifi_controller: todo,
+pub struct MCU
+{
+    // pub wifi_driver: todo,
+    // pub wifi_controller: todo,
     pub flywheels:
         gpio::Pin<gpio::bank0::Gpio8, gpio::FunctionSio<gpio::SioOutput>, gpio::PullDown>,
     pub loader: gpio::Pin<gpio::bank0::Gpio10, gpio::FunctionSio<gpio::SioOutput>, gpio::PullDown>,
@@ -26,8 +26,10 @@ pub struct MCU {
     pub tilt: pwm::Channel<pwm::Slice<pwm::Pwm2, pwm::FreeRunning>, pwm::A>,
 }
 
-impl MCU {
-    pub fn init() -> MCU {
+impl MCU
+{
+    pub fn init() -> MCU
+    {
         // Grab our singleton objects
         let mut pac = pac::Peripherals::take().unwrap();
         let core = pac::CorePeripherals::take().unwrap();

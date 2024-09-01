@@ -5,16 +5,22 @@
 //! `picoserve` and `embassy` crates to manage network operations
 //! and timing.
 
-use crate::messages;
 use embassy_net::{driver::Driver as NetworkDriver, Stack};
 use embassy_time::Duration;
 use picoserve::{
     io::embedded_io_async as embedded_aio,
     response::ws::{
-        Message, ReadMessageError, SocketRx, SocketTx, WebSocketCallback, WebSocketUpgrade,
+        Message,
+        ReadMessageError,
+        SocketRx,
+        SocketTx,
+        WebSocketCallback,
+        WebSocketUpgrade,
     },
     Router,
 };
+
+use crate::messages;
 
 /// Runs the comms with the given configuration.
 ///
@@ -33,7 +39,8 @@ pub async fn run<Driver: NetworkDriver>(
     port: u16,
     stack: &'static Stack<Driver>,
     config: Option<&'static picoserve::Config<Duration>>,
-) -> ! {
+) -> !
+{
     let default_config = picoserve::Config::new(picoserve::Timeouts {
         start_read_request: Some(Duration::from_secs(5)),
         read_request: Some(Duration::from_secs(1)),
@@ -69,7 +76,8 @@ pub async fn run<Driver: NetworkDriver>(
 pub struct ServerTimer;
 
 #[allow(unused_qualifications)]
-impl picoserve::Timer for ServerTimer {
+impl picoserve::Timer for ServerTimer
+{
     type Duration = embassy_time::Duration;
     type TimeoutError = embassy_time::TimeoutError;
 
@@ -90,7 +98,8 @@ impl picoserve::Timer for ServerTimer {
         &mut self,
         duration: Self::Duration,
         future: F,
-    ) -> Result<F::Output, Self::TimeoutError> {
+    ) -> Result<F::Output, Self::TimeoutError>
+    {
         embassy_time::with_timeout(duration, future).await
     }
 }
@@ -102,7 +111,8 @@ impl picoserve::Timer for ServerTimer {
 /// callback mechanism to handle messages.
 pub struct WebSocket;
 
-impl WebSocketCallback for WebSocket {
+impl WebSocketCallback for WebSocket
+{
     /// Runs the WebSocket connection, processing incoming messages.
     ///
     /// This method is called when a WebSocket connection is established.
@@ -116,7 +126,8 @@ impl WebSocketCallback for WebSocket {
     ///
     /// # Returns
     ///
-    /// A result indicating whether the connection was handled successfully or if there was an error.
+    /// A result indicating whether the connection was handled successfully or
+    /// if there was an error.
     async fn run<Reader, Writer>(
         self,
         mut rx: SocketRx<Reader>,

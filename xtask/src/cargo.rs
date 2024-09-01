@@ -10,13 +10,18 @@ use anyhow::{bail, Result};
 use crate::windows_safe_path;
 
 #[derive(Debug, PartialEq)]
-pub enum CargoAction {
+pub enum CargoAction
+{
     Build,
     Run,
 }
 
 /// Execute cargo with the given arguments and from the specified directory.
-pub fn run(args: &[String], cwd: &Path) -> Result<()> {
+pub fn run(
+    args: &[String],
+    cwd: &Path,
+) -> Result<()>
+{
     if !cwd.is_dir() {
         bail!("The `cwd` argument MUST be a directory");
     }
@@ -39,19 +44,22 @@ pub fn run(args: &[String], cwd: &Path) -> Result<()> {
     // requires this in order to function correctly:
     if status.success() {
         Ok(())
-    } else {
+    }
+    else {
         bail!("Failed to execute cargo subcommand")
     }
 }
 
-fn get_cargo() -> String {
+fn get_cargo() -> String
+{
     // On Windows when executed via `cargo run` (e.g. via the xtask alias) the
     // `cargo` on the search path is NOT the cargo-wrapper but the `cargo` from the
     // toolchain - that one doesn't understand `+toolchain`
     #[cfg(target_os = "windows")]
     let cargo = if let Ok(cargo) = std::env::var("CARGO_HOME") {
         format!("{cargo}/bin/cargo")
-    } else {
+    }
+    else {
         String::from("cargo")
     };
 
@@ -62,7 +70,8 @@ fn get_cargo() -> String {
 }
 
 #[derive(Debug, Default)]
-pub struct CargoArgsBuilder {
+pub struct CargoArgsBuilder
+{
     toolchain: Option<String>,
     subcommand: String,
     target: Option<String>,
@@ -70,9 +79,13 @@ pub struct CargoArgsBuilder {
     args: Vec<String>,
 }
 
-impl CargoArgsBuilder {
+impl CargoArgsBuilder
+{
     #[must_use]
-    pub fn toolchain<S>(mut self, toolchain: S) -> Self
+    pub fn toolchain<S>(
+        mut self,
+        toolchain: S,
+    ) -> Self
     where
         S: Into<String>,
     {
@@ -81,7 +94,10 @@ impl CargoArgsBuilder {
     }
 
     #[must_use]
-    pub fn subcommand<S>(mut self, subcommand: S) -> Self
+    pub fn subcommand<S>(
+        mut self,
+        subcommand: S,
+    ) -> Self
     where
         S: Into<String>,
     {
@@ -90,7 +106,10 @@ impl CargoArgsBuilder {
     }
 
     #[must_use]
-    pub fn target<S>(mut self, target: S) -> Self
+    pub fn target<S>(
+        mut self,
+        target: S,
+    ) -> Self
     where
         S: Into<String>,
     {
@@ -99,13 +118,20 @@ impl CargoArgsBuilder {
     }
 
     #[must_use]
-    pub fn features(mut self, features: &[String]) -> Self {
+    pub fn features(
+        mut self,
+        features: &[String],
+    ) -> Self
+    {
         self.features = features.to_vec();
         self
     }
 
     #[must_use]
-    pub fn arg<S>(mut self, arg: S) -> Self
+    pub fn arg<S>(
+        mut self,
+        arg: S,
+    ) -> Self
     where
         S: Into<String>,
     {
@@ -114,7 +140,8 @@ impl CargoArgsBuilder {
     }
 
     #[must_use]
-    pub fn build(self) -> Vec<String> {
+    pub fn build(self) -> Vec<String>
+    {
         let mut args = vec![];
 
         if let Some(toolchain) = self.toolchain {

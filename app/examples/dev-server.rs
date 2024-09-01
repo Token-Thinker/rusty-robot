@@ -1,4 +1,5 @@
 use clap::Parser;
+use comms::{messages::command_router, server::run as websocket_server};
 use embassy_executor::{Executor, Spawner};
 use embassy_net::{Config, Ipv4Address, Ipv4Cidr, Stack, StackResources};
 use embassy_net_tuntap::TunTapDevice;
@@ -6,11 +7,11 @@ use heapless::Vec;
 use log::*;
 use rand_core::{OsRng, RngCore};
 use static_cell::StaticCell;
-use comms::{messages::command_router, server::run as websocket_server};
 
 #[derive(Parser)]
 #[clap(version = "1.0")]
-struct Opts {
+struct Opts
+{
     /// TAP device name
     #[clap(long, default_value = "tap0")]
     tap: String,
@@ -20,12 +21,11 @@ struct Opts {
 }
 
 #[embassy_executor::task]
-async fn net_task(stack: &'static Stack<TunTapDevice>) -> ! {
-    stack.run().await
-}
+async fn net_task(stack: &'static Stack<TunTapDevice>) -> ! { stack.run().await }
 
 #[embassy_executor::task]
-async fn main_task(spawner: Spawner) {
+async fn main_task(spawner: Spawner)
+{
     let opts: Opts = Opts::parse();
 
     // Init network device
@@ -38,7 +38,8 @@ async fn main_task(spawner: Spawner) {
             dns_servers: Vec::new(),
             gateway: Some(Ipv4Address::new(192, 168, 69, 1)),
         })
-    } else {
+    }
+    else {
         Config::dhcpv4(Default::default())
     };
 
@@ -74,7 +75,8 @@ async fn main_task(spawner: Spawner) {
 
 static EXECUTOR: StaticCell<Executor> = StaticCell::new();
 
-fn main() {
+fn main()
+{
     env_logger::builder()
         .filter_level(log::LevelFilter::Debug)
         .filter_module("async_io", log::LevelFilter::Info)

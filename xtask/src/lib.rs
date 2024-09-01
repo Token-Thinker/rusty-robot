@@ -1,11 +1,14 @@
 use std::{
+    fs,
     path::{Path, PathBuf},
 };
+
 use anyhow::{bail, Result};
 use clap::ValueEnum;
 use log::info;
 use strum_macros::{Display, EnumIter};
-use crate::cargo::{CargoArgsBuilder, run};
+
+use crate::cargo::{run, CargoArgsBuilder};
 
 pub mod cargo;
 
@@ -25,7 +28,8 @@ pub mod cargo;
 )]
 #[serde(rename_all = "kebab-case")]
 #[strum(serialize_all = "kebab-case")]
-pub enum Platform {
+pub enum Platform
+{
     #[strum(serialize = "esp32")]
     Esp32,
     #[strum(serialize = "local")]
@@ -33,7 +37,6 @@ pub enum Platform {
     #[strum(serialize = "rp2040")]
     Rp2040,
 }
-
 
 /// Build the specified package, using the given toolchain/target/features if
 /// provided.
@@ -44,8 +47,16 @@ pub fn build_package(
     toolchain: Option<String>,
     target: Option<String>,
     platform: Platform,
-) -> Result<()> {
-    let package_paths = find_package_paths(workspace, platform)?;
+) -> Result<()>
+{
+    let package_paths = package_paths(workspace)?
+        .into_iter()
+        .filter(|package_path| {
+            package_path.ends_with("hardware")
+                || package_path.ends_with("comms")
+                || package_path.ends_with(&format!("{:?}", platform).to_lowercase())
+        })
+        .collect::<Vec<_>>();
 
     for package_path in package_paths {
         let builder = setup_package_build(
@@ -55,7 +66,7 @@ pub fn build_package(
             toolchain.clone(),
             target.clone(),
             platform,
-            true,  // Set to true for quiet build
+            true, // Set to true for quiet build
         )?;
 
         let cargo_args = builder.build();
@@ -74,8 +85,8 @@ pub fn run_package(
     toolchain: Option<String>,
     platform: Platform,
     bin: &str,
-) -> Result<()> {
-
+) -> Result<()>
+{
     let target = match platform {
         Platform::Esp32 => "xtensa-esp32-none-elf".to_string(),
         Platform::Rp2040 => "thumbv6m-none-eabi".to_string(),
@@ -88,13 +99,13 @@ pub fn run_package(
         no_default_features,
         toolchain.clone(),
         Some(target.clone()),
-        platform
+        platform,
     )?;
 
     let app_path = workspace.join("app");
 
     let mut app_features = features.clone();
-    if bin != "rr-app"{
+    if bin != "rr-app" {
         app_features.push(bin.to_string());
     }
 
@@ -110,10 +121,10 @@ pub fn run_package(
 
     let mut builder = builder.subcommand("run");
 
-
     if bin == "rr-app" {
         builder = builder.arg("--bin").arg(bin);
-    } else {
+    }
+    else {
         builder = builder.arg("--example").arg(bin);
     }
 
@@ -125,8 +136,6 @@ pub fn run_package(
     Ok(())
 }
 
-
-
 // ----------------------------------------------------------------------------
 // Helper Functions
 fn setup_package_build(
@@ -137,7 +146,8 @@ fn setup_package_build(
     target: Option<String>,
     platform: Platform,
     quiet: bool,
-) -> Result<CargoArgsBuilder> {
+) -> Result<CargoArgsBuilder>
+{
     println!("Setting up build for package: {}", package_path.display());
 
     if !package_path.exists() || !package_path.join("Cargo.toml").exists() {
@@ -153,7 +163,12 @@ fn setup_package_build(
         .subcommand("build")
         .arg("--release")
         .arg("--manifest-path")
-        .arg(package_path.join("Cargo.toml").to_string_lossy().to_string());
+        .arg(
+            package_path
+                .join("Cargo.toml")
+                .to_string_lossy()
+                .to_string(),
+        );
 
     if quiet {
         builder = builder.arg("--quiet");
@@ -163,7 +178,8 @@ fn setup_package_build(
         let mut specific_features = features.clone();
         specific_features.push(platform.to_string());
         builder = builder.features(&specific_features);
-    } else {
+    }
+    else {
         builder = builder.features(&features);
     }
 
@@ -186,21 +202,26 @@ fn setup_package_build(
     Ok(builder)
 }
 
-fn find_package_paths(workspace: &Path, platform: Platform) -> Result<Vec<PathBuf>> {
-    let mut package_paths = vec![];
+/// Return a list paths to each valid CArgo package in the workspace
+pub fn package_paths(workspace: &Path) -> Result<Vec<PathBuf>>
+{
+    let mut paths = vec![];
+    for entry in fs::read_dir(workspace)? {
+        let entry = entry?.path();
 
-    // Add the platform-specific MCU package
-    let platform_mcu_path = workspace.join(format!("hardware/mcu/{:?}", platform).to_lowercase());
-    package_paths.push(platform_mcu_path);
+        if entry.is_dir() {
+            paths.extend(package_paths(&entry)?);
+        }
+        else if entry.is_file() && entry.file_name() == Some("Cargo.toml".as_ref()) {
+            paths.push(entry.parent().unwrap().to_path_buf());
+        }
+    }
 
-    // Add common packages
-    let common_paths = vec![workspace.join("hardware"), workspace.join("comms")];
-    package_paths.extend(common_paths);
-
-    Ok(package_paths)
+    Ok(paths)
 }
 
 /// Make the path "Windows"-safe
-pub fn windows_safe_path(path: &Path) -> PathBuf {
+pub fn windows_safe_path(path: &Path) -> PathBuf
+{
     PathBuf::from(path.to_str().unwrap().to_string().replace("\\\\?\\", ""))
 }

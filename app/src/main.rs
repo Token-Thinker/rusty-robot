@@ -1,4 +1,5 @@
-//testing cargo run process to board. This is just an example hello world for esp32.
+// testing cargo run process to board. This is just an example hello world for
+// esp32.
 #![no_std]
 #![no_main]
 
@@ -19,7 +20,8 @@ use esp_hal::{
 static ALLOCATOR: esp_alloc::EspHeap = esp_alloc::EspHeap::empty();
 
 #[entry]
-fn main() -> ! {
+fn main() -> !
+{
     let peripherals = Peripherals::take();
     let system = SystemControl::new(peripherals.SYSTEM);
     let clocks = ClockControl::boot_defaults(system.clock_control).freeze();
