@@ -29,4 +29,4 @@ runs:
 
     # Build Project
     - name: Build
-      run: cargo xtask build-package ${{ inputs.device }} --target ${{ inputs.target }}
+      run: cargo +${{ inputs.toolchain }} xtask build-package ${{ inputs.device }} --target ${{ inputs.target }}

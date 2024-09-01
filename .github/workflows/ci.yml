@@ -48,13 +48,11 @@ jobs:
       - uses: esp-rs/xtensa-toolchain@v1.5
         with:
           ldproxy: false
-
-      # Setup Rust toolchain
-      - name: Build and Check
-        uses: actions-rs/toolchain@v1
+      # Install the Rust stable toolchain for RISC-V devices:
+      - uses: dtolnay/rust-toolchain@v1
         with:
-          toolchain: ${{ matrix.device.toolchain }}
-          target: ${{ matrix.device.target }}
+          target: riscv32imc-unknown-none-elf,riscv32imac-unknown-none-elf
+          toolchain: stable
           components: rust-src
 
       # Cache Cargo builds
@@ -76,20 +74,6 @@ jobs:
     env:
       RUSTC_BOOTSTRAP: 1
 
-    strategy:
-      fail-fast: false
-      matrix:
-        device: [
-          # Local
-          #{ soc: "local", target: "x86_64-unknown-linux-gnu", toolchain: "stable" },
-
-          # RPi Boards
-          #{ soc: "rp2040", target: "thumbv6m-none-eabi", toolchain: "stable" },
-
-          # Esp32 boards
-          { soc: "esp32", target: "xtensa-esp32-none-elf", toolchain: "esp" }
-        ]
-
     steps:
       - uses: actions/checkout@v4
       - uses: esp-rs/xtensa-toolchain@v1.5
@@ -98,9 +82,10 @@ jobs:
           version: ${{ env.MSRV }}
       - uses: Swatinem/rust-cache@v2
 
-      # Verify MSRV compliance
-      - name: msrv Verification
-        run: cargo xtask build-package ${{ matrix.device.soc }} --target ${{ matrix.device.target }}
+      # Verify the MSRV for all Xtensa chips:
+      - name: msrv Xtensa
+        run: |
+          cargo xtask build-package --toolchain=esp --target=xtensa-esp32-none-elf
 
   # --------------------------------------------------------------------------
   # Format
