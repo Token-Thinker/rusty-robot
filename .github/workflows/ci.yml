@@ -76,7 +76,11 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-      - uses: esp-rs/xtensa-toolchain@v1.5
+
+      - name: Copy files
+        working-directory: ${{ env.WORK_DIR }}/local_checkout
+        run: cp -r .github "$GITHUB_WORKSPACE/"
+             - uses: esp-rs/xtensa-toolchain@v1.5
         with:
           ldproxy: false
           version: ${{ env.MSRV }}
@@ -85,7 +89,7 @@ jobs:
       # Verify the MSRV for all Xtensa chips:
       - name: msrv Xtensa
         run: |
-          cargo xtask build-package --toolchain=esp --target=xtensa-esp32-none-elf
+          cargo xtask build-package esp32 --toolchain=esp --target=xtensa-esp32-none-elf
 
   # --------------------------------------------------------------------------
   # Format
