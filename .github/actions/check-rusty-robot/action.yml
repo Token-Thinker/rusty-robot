@@ -29,4 +29,5 @@ runs:
 
     # Build Project
     - name: Build
+      shell: bash
       run: cargo +${{ inputs.toolchain }} xtask build-package ${{ inputs.device }} --target ${{ inputs.target }}
