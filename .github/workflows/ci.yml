@@ -1,0 +1,136 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+  merge_group:
+  workflow_dispatch:
+
+env:
+  CARGO_TERM_COLOR: always
+  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  MSRV: "1.76.0"
+
+# Cancel any currently running workflows from the same PR, branch, or
+# tag when a new workflow is triggered.
+#
+# https://stackoverflow.com/a/66336834
+concurrency:
+  cancel-in-progress: true
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+
+jobs:
+  # --------------------------------------------------------------------------
+  # Build Packages
+
+  rusty-robot:
+    name: rusty-robot (${{ matrix.device.soc }})
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        device: [
+          #Local
+          { soc: "local", target: "x86_64-unknown-linux-gnu", toolchain: "stable" }
+
+          #RPi Boards
+          { soc: "rp2040", target: "thumbv6m-none-eabi", toolchain: "stable" },
+
+          #Esp32 boards
+          ## Xtensa devices:
+          { soc: "esp32", target: "xtensa-esp32-none-elf", toolchain: "esp" },
+        ]
+    steps:
+      - uses: actions/checkout@v4
+
+      # Setup Rust toolchain
+      - name: Setup Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: ${{ matrix.device.toolchain }}
+          target: ${{ matrix.device.target }}
+          components: rust-src
+
+      # Install Xtensa toolchain for ESP32 targets
+      - name: Install Xtensa Toolchain (ESP32 only)
+        if: matrix.device.soc == 'esp32'
+        uses: esp-rs/xtensa-toolchain@v1.5
+        with:
+          ldproxy: false
+
+      # Cache Cargo builds
+      - uses: Swatinem/rust-cache@v2
+
+      # Build the project with cargo xtask
+      - name: Build Project
+        run: cargo xtask build-package ${{ matrix.device.soc }} --target ${{ matrix.device.target }}
+
+  # --------------------------------------------------------------------------
+  # MSRV
+
+  msrv:
+    runs-on: ubuntu-latest
+    env:
+      RUSTC_BOOTSTRAP: 1
+
+    strategy:
+      fail-fast: false
+      matrix:
+        device: [
+          # Local
+          { soc: "local", target: "x86_64-unknown-linux-gnu", toolchain: "stable" },
+
+          # RPi Boards
+          { soc: "rp2040", target: "thumbv6m-none-eabi", toolchain: "stable" },
+
+          # Esp32 boards
+          { soc: "esp32", target: "xtensa-esp32-none-elf", toolchain: "esp" }
+        ]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # Setup Rust toolchain
+      - name: Setup Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: ${{ matrix.device.toolchain }}
+          target: ${{ matrix.device.target }}
+          components: rust-src
+
+      # Install Xtensa toolchain for ESP32 targets
+      - name: Install Xtensa Toolchain (ESP32 only)
+        if: matrix.device.soc == 'esp32'
+        uses: esp-rs/xtensa-toolchain@v1.5
+        with:
+          ldproxy: false
+          version: ${{ env.MSRV }}
+
+      # Cache Cargo builds
+      - uses: Swatinem/rust-cache@v2
+
+      # Verify MSRV compliance
+      - name: MSRV Check
+        run: cargo xtask build-package ${{ matrix.device.soc }} --target ${{ matrix.device.target }}
+
+  # --------------------------------------------------------------------------
+  # Format
+
+  rustfmt:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+      # Some of the configuration items in 'rustfmt.toml' require the 'nightly'
+      # release channel:
+      - uses: dtolnay/rust-toolchain@v1
+        with:
+          toolchain: nightly
+          components: rustfmt
+      - uses: Swatinem/rust-cache@v2
+
+      # Check the formatting of all packages:
+      - run: cargo xtask fmt-packages --check
