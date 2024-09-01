@@ -77,10 +77,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Copy files
-        working-directory: ${{ env.WORK_DIR }}/local_checkout
-        run: cp -r .github "$GITHUB_WORKSPACE/"
-             - uses: esp-rs/xtensa-toolchain@v1.5
+      - uses: esp-rs/xtensa-toolchain@v1.5
         with:
           ldproxy: false
           version: ${{ env.MSRV }}
