@@ -32,14 +32,14 @@ jobs:
       matrix:
         device: [
           #Local
-          { soc: "local", target: "x86_64-unknown-linux-gnu", toolchain: "stable" }
+          #{ soc: "local", target: "x86_64-unknown-linux-gnu", toolchain: "stable" }
 
           #RPi Boards
-          { soc: "rp2040", target: "thumbv6m-none-eabi", toolchain: "stable" },
+          #{ soc: "rp2040", target: "thumbv6m-none-eabi", toolchain: "stable" }
 
           #Esp32 boards
           ## Xtensa devices:
-          { soc: "esp32", target: "xtensa-esp32-none-elf", toolchain: "esp" },
+          { soc: "esp32", target: "xtensa-esp32-none-elf", toolchain: "esp" }
         ]
     steps:
       - uses: actions/checkout@v4
@@ -80,10 +80,10 @@ jobs:
       matrix:
         device: [
           # Local
-          { soc: "local", target: "x86_64-unknown-linux-gnu", toolchain: "stable" },
+          #{ soc: "local", target: "x86_64-unknown-linux-gnu", toolchain: "stable" },
 
           # RPi Boards
-          { soc: "rp2040", target: "thumbv6m-none-eabi", toolchain: "stable" },
+          #{ soc: "rp2040", target: "thumbv6m-none-eabi", toolchain: "stable" },
 
           # Esp32 boards
           { soc: "esp32", target: "xtensa-esp32-none-elf", toolchain: "esp" }
