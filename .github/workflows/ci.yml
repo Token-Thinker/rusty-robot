@@ -61,8 +61,12 @@ jobs:
       - uses: Swatinem/rust-cache@v2
 
       # Build the project with cargo xtask
-      - name: Build Project
-        run: cargo xtask build-package ${{ matrix.device.soc }} --target ${{ matrix.device.target }}
+      - name: Build and Check
+        uses: ./.github/actions/check-rusty-robot
+        with:
+          device: ${{ matrix.device.soc }}
+          target: ${{ matrix.device.target }}
+          toolchain: ${{ matrix.device.toolchain }}
 
   # --------------------------------------------------------------------------
   # MSRV

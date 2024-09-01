@@ -1,0 +1,32 @@
+name: Build and Check
+description: Build and check the rusty-robot pacakges for a specified device
+inputs:
+  device:
+    description: "Device SOC"
+    required: true
+  target:
+    description: "Target"
+    required: true
+  toolchain:
+    description: "Toolchain channel"
+    required: true
+runs:
+  using: "composite"
+  steps:
+    - name: Set up cargo environment
+      shell: bash
+      run: |
+        # Convert the target triple from kebab-case to SCREAMING_SNAKE_CASE:
+        big_target=$(echo "${{ matrix.device.target }}" | tr [:lower:] [:upper:] | tr '-' '_')
+        # Set the *target specific* RUSTFLAGS for the current device:
+        echo "CARGO_TARGET_${big_target}_RUSTFLAGS=-Dwarnings" >> $GITHUB_ENV
+        # Linting toolchain (stable cant build documentation)
+        if [ "${{ inputs.toolchain }}" == "nightly" ]; then
+          echo "LINTING_TOOLCHAIN=+nightly" >> $GITHUB_ENV
+        else
+          echo "LINTING_TOOLCHAIN=+esp" >> $GITHUB_ENV
+        fi
+
+    # Build Project
+    - name: Build
+      run: cargo xtask build-package ${{ inputs.device }} --target ${{ inputs.target }}
