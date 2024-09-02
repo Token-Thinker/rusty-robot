@@ -48,8 +48,8 @@ pub trait Motor
     /// # Returns
     ///
     /// * `Result<(), Self::Error>` - Returns `Ok(())` if the motor is
-    ///   successfully turned on,
-    ///   or an error of type `Self::Error` if the operation fails.
+    ///   successfully turned on, or an error of type `Self::Error` if the
+    ///   operation fails.
     fn on(&mut self) -> Result<(), Self::Error>;
 
     /// Turn the motor off
@@ -61,8 +61,8 @@ pub trait Motor
     /// # Returns
     ///
     /// * `Result<(), Self::Error>` - Returns `Ok(())` if the motor is
-    ///   successfully turned off,
-    ///   or an error of type `Self::Error` if the operation fails.
+    ///   successfully turned off, or an error of type `Self::Error` if the
+    ///   operation fails.
     fn off(&mut self) -> Result<(), Self::Error>;
 
     /// Execute a customizable launch sequence
@@ -74,8 +74,8 @@ pub trait Motor
     /// # Returns
     ///
     /// * `Result<(), Self::Error>` - Returns `Ok(())` if the launch sequence is
-    ///   successfully executed,
-    ///   or an error of type `Self::Error` if the operation fails.
+    ///   successfully executed, or an error of type `Self::Error` if the
+    ///   operation fails.
     async fn launch(&mut self) -> Result<(), Self::Error>;
 
     /// Process Commands
@@ -91,8 +91,8 @@ pub trait Motor
     /// # Returns
     ///
     /// * `Result<(), Self::Error>` - Returns `Ok(())` if the command is
-    ///   successfully processed,
-    ///   or an error of type `Self::Error` if the operation fails.
+    ///   successfully processed, or an error of type `Self::Error` if the
+    ///   operation fails.
     async fn process(
         &mut self,
         command: MotorCommand,
