@@ -172,7 +172,8 @@ fn fmt_packages(
 fn lint_packages(
     workspace: &Path,
     args: LintPackagesArgs,
-) -> Result<()>{
+) -> Result<()>
+{
     let (target, _toolchain) = match args.platform {
         Platform::Esp32 => ("xtensa-esp32-none-elf", "esp"),
         Platform::Rp2040 => ("thumbv6m-none-eabi", "default"),
@@ -203,10 +204,7 @@ fn lint_packages(
             Some("app") => {
                 lint_package(
                     &path,
-                    &[
-                        "-Zbuild-std=core,alloc",
-                        &format!("--target={}", target),
-                    ],
+                    &["-Zbuild-std=core,alloc", &format!("--target={}", target)],
                 )?;
             }
             _ => {
@@ -218,7 +216,11 @@ fn lint_packages(
     Ok(())
 }
 
-fn lint_package(path: &Path, args: &[&str]) -> Result<()>{
+fn lint_package(
+    path: &Path,
+    args: &[&str],
+) -> Result<()>
+{
     log::info!("Linting package: {}", path.display());
 
     let mut builder = CargoArgsBuilder::default().subcommand("clippy");

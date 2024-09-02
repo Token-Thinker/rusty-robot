@@ -175,8 +175,8 @@ pub async fn connection()
 
             loop {
                 if esp_wifi::wifi::get_wifi_state() == WifiState::StaConnected {
-                        controller.wait_for_event(WifiEvent::StaDisconnected).await;
-                        Timer::after(Duration::from_millis(5000)).await;
+                    controller.wait_for_event(WifiEvent::StaDisconnected).await;
+                    Timer::after(Duration::from_millis(5000)).await;
                 }
 
                 if !matches!(controller.is_started(), Ok(true)) {

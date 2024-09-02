@@ -98,9 +98,8 @@ pub trait Servo
     /// # Returns
     ///
     /// * `Result<(), Self::Error>` - Returns `Ok(())` if the servo successfully
-    ///   moves to the
-    ///   specified coordinates, or an error of type `Self::Error` if the
-    ///   operation fails.
+    ///   moves to the specified coordinates, or an error of type `Self::Error`
+    ///   if the operation fails.
     async fn move_to(
         &mut self,
         x: u16,
@@ -136,8 +135,8 @@ pub trait Servo
     /// # Returns
     ///
     /// * `Result<(), Self::Error>` - Returns `Ok(())` if the command is
-    ///   successfully processed,
-    ///   or an error of type `Self::Error` if the operation fails.
+    ///   successfully processed, or an error of type `Self::Error` if the
+    ///   operation fails.
     async fn process(
         &mut self,
         command: ServoCommand,
