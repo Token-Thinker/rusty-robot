@@ -27,6 +27,10 @@ runs:
           echo "LINTING_TOOLCHAIN=+esp" >> $GITHUB_ENV
         fi
 
+    # Clippy and docs checks
+    - name: Clippy
+      shell: bash
+      run: cargo $LINTING_TOOLCHAIN xtask lint-packages ${{ inputs.device }}
     # Build Project
     - name: Build
       shell: bash
