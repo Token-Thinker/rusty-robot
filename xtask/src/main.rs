@@ -2,7 +2,7 @@ use std::path::{Path, PathBuf};
 
 use anyhow::Result;
 use clap::{Args, Parser};
-use xtask::{cargo::CargoArgsBuilder, Platform};
+use xtask::{cargo::CargoArgsBuilder, package_paths, Platform};
 
 // ----------------------------------------------------------------------------
 // Command-line Interface
@@ -15,6 +15,8 @@ enum Cli
     Run(RunArgs),
     /// Format all packages in the workspace with rustfmt
     FmtPackages(FmtPackagesArgs),
+    /// Lint all packages in workspace with cargo clippy
+    LintPackages(LintPackagesArgs),
 }
 
 #[derive(Debug, Args)]
@@ -64,6 +66,18 @@ struct FmtPackagesArgs
     #[arg(long)]
     check: bool,
 }
+
+#[derive(Debug, Args)]
+struct LintPackagesArgs
+{
+    /// Run in 'check' mode; exits with 0 if linting is correct, 1 otherwise
+    #[arg(long)]
+    check: bool,
+
+    /// Target platform to lint for
+    #[arg(value_enum)]
+    platform: Platform,
+}
 // ----------------------------------------------------------------------------
 // Application
 
@@ -81,6 +95,7 @@ fn main() -> Result<()>
         Cli::BuildPackage(args) => build_package(&workspace, args),
         Cli::Run(args) => run(&workspace, args),
         Cli::FmtPackages(args) => fmt_packages(&workspace, args),
+        Cli::LintPackages(args) => lint_packages(&workspace, args),
     }
 }
 
@@ -152,4 +167,72 @@ fn fmt_packages(
     }
 
     Ok(())
+}
+
+fn lint_packages(
+    workspace: &Path,
+    args: LintPackagesArgs,
+) -> Result<()>{
+    let (target, _toolchain) = match args.platform {
+        Platform::Esp32 => ("xtensa-esp32-none-elf", "esp"),
+        Platform::Rp2040 => ("thumbv6m-none-eabi", "default"),
+        Platform::Local => ("x86_64-unknown-linux-gnu", "default"),
+    };
+
+    let package_paths = package_paths(workspace)?
+        .into_iter()
+        .filter(|package_path| {
+            package_path.ends_with("hardware")
+                || package_path.ends_with("comms")
+                || package_path.ends_with(format!("{:?}", args.platform).to_lowercase())
+        })
+        .collect::<Vec<_>>();
+
+    for path in package_paths {
+        match path.file_name().and_then(|name| name.to_str()) {
+            Some("hardware") | Some("comms") => {
+                lint_package(
+                    &path,
+                    &[
+                        "-Zbuild-std=core,alloc",
+                        &format!("--target={}", target),
+                        &format!("--features={}", args.platform),
+                    ],
+                )?;
+            }
+            Some("app") => {
+                lint_package(
+                    &path,
+                    &[
+                        "-Zbuild-std=core,alloc",
+                        &format!("--target={}", target),
+                    ],
+                )?;
+            }
+            _ => {
+                lint_package(&path, &[])?;
+            }
+        }
+    }
+
+    Ok(())
+}
+
+fn lint_package(path: &Path, args: &[&str]) -> Result<()>{
+    log::info!("Linting package: {}", path.display());
+
+    let mut builder = CargoArgsBuilder::default().subcommand("clippy");
+
+    for arg in args {
+        builder = builder.arg(arg.to_string());
+    }
+
+    let cargo_args = builder
+        .arg("--release")
+        .arg("--")
+        .arg("-D")
+        .arg("warnings")
+        .build();
+
+    xtask::cargo::run(&cargo_args, path)
 }
