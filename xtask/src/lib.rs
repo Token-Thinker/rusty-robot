@@ -54,7 +54,7 @@ pub fn build_package(
         .filter(|package_path| {
             package_path.ends_with("hardware")
                 || package_path.ends_with("comms")
-                || package_path.ends_with(&format!("{:?}", platform).to_lowercase())
+                || package_path.ends_with(format!("{:?}", platform).to_lowercase())
         })
         .collect::<Vec<_>>();
 

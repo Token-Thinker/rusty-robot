@@ -174,12 +174,9 @@ pub async fn connection()
             let controller = &mut manager.wifi_controller;
 
             loop {
-                match esp_wifi::wifi::get_wifi_state() {
-                    WifiState::StaConnected => {
+                if esp_wifi::wifi::get_wifi_state() == WifiState::StaConnected {
                         controller.wait_for_event(WifiEvent::StaDisconnected).await;
                         Timer::after(Duration::from_millis(5000)).await;
-                    }
-                    _ => {}
                 }
 
                 if !matches!(controller.is_started(), Ok(true)) {
